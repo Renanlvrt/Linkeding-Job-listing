@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareerGold - Search Criteria Input</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#b7860b",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#221d10",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#1c170d] dark:text-white min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Navigation Rail (SideNavBar Component modified for rail style) -->
+<aside class="flex w-20 flex-col border-r border-[#e8e1cf] dark:border-white/10 bg-white dark:bg-background-dark h-full py-6 items-center">
+<div class="mb-10">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white" data-alt="CareerGold corporate logo icon">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+</div>
+<nav class="flex flex-col gap-6 flex-1">
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="p-2 rounded-xl text-[#1c170d] dark:text-white/70 hover:bg-primary/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">dashboard</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="p-2 rounded-xl bg-primary text-white">
+<span class="material-symbols-outlined">search</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="p-2 rounded-xl text-[#1c170d] dark:text-white/70 hover:bg-primary/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="p-2 rounded-xl text-[#1c170d] dark:text-white/70 hover:bg-primary/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</div>
+</div>
+</nav>
+<div class="mt-auto">
+<div class="p-2 rounded-xl text-[#1c170d] dark:text-white/70 hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors">
+<span class="material-symbols-outlined">logout</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<div class="max-w-[800px] w-full mx-auto px-6 py-12 flex flex-col items-center">
+<!-- PageHeading Component -->
+<div class="w-full mb-10 text-center">
+<h1 class="text-[#1c170d] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em] mb-2">Define Your Search</h1>
+<p class="text-[#9b844b] dark:text-primary/70 text-base font-normal leading-normal">Set your preferences to find the best job matches.</p>
+</div>
+<!-- Search Criteria Container -->
+<div class="w-full max-w-[600px] bg-white dark:bg-zinc-900 border border-[#e8e1cf] dark:border-white/10 rounded-xl p-8 shadow-sm">
+<div class="flex flex-col gap-6">
+<!-- Job Title TextField -->
+<div class="flex flex-col w-full">
+<label class="flex flex-col">
+<p class="text-[#1c170d] dark:text-white/90 text-sm font-semibold leading-normal pb-2 uppercase tracking-wider">Job Title</p>
+<input class="form-input flex w-full rounded-lg text-[#1c170d] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#e8e1cf] dark:border-white/20 bg-transparent focus:border-primary h-14 placeholder:text-[#9b844b]/50 p-[15px] text-base font-normal" placeholder="e.g. Senior Software Engineer" type="text"/>
+</label>
+</div>
+<!-- Desired Location TextField -->
+<div class="flex flex-col w-full">
+<label class="flex flex-col">
+<p class="text-[#1c170d] dark:text-white/90 text-sm font-semibold leading-normal pb-2 uppercase tracking-wider">Desired Location</p>
+<div class="flex w-full items-stretch relative">
+<input class="form-input flex w-full rounded-lg text-[#1c170d] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#e8e1cf] dark:border-white/20 bg-transparent focus:border-primary h-14 placeholder:text-[#9b844b]/50 p-[15px] pr-12 text-base font-normal" placeholder="e.g. Remote or New York, NY" type="text"/>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b844b]">
+<span class="material-symbols-outlined">map</span>
+</div>
+</div>
+</label>
+</div>
+<!-- Skill Keywords TextField (Textarea) -->
+<div class="flex flex-col w-full">
+<label class="flex flex-col">
+<p class="text-[#1c170d] dark:text-white/90 text-sm font-semibold leading-normal pb-2 uppercase tracking-wider">Skill Keywords</p>
+<textarea class="form-input flex w-full rounded-lg text-[#1c170d] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#e8e1cf] dark:border-white/20 bg-transparent focus:border-primary min-h-36 placeholder:text-[#9b844b]/50 p-[15px] text-base font-normal leading-relaxed" placeholder="e.g. React, Python, Project Management"></textarea>
+<p class="mt-2 text-xs text-[#9b844b] font-medium">Separate skills with commas to improve accuracy.</p>
+</label>
+</div>
+<!-- Primary Action Button -->
+<div class="pt-4">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-4 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]">
+<span class="truncate">Save &amp; Find Jobs</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Subtle Footer for context -->
+<div class="mt-8 flex items-center gap-2 text-[#9b844b] text-sm">
+<span class="material-symbols-outlined text-sm">lock</span>
+<p>Your data is secured and encrypted.</p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,47 @@
+Dear Selection Committee,
+
+I need to confess something. I was having more fun failing than I ever had succeeding. I
+have spent more hours debugging a servo motor than most people spend choosing what
+to watch on Netflix. There is a particular silence at 2 AM when you are debugging a
+robot, when you stop asking "why did this break?" and start asking "what is this trying to
+teach me?" That night, I found the answer. And this letter is my attempt to state it
+precisely.
+
+My recent work has highlighted the central question I hope to pursue through AScI: how
+can we design intelligent systems that remain robust in the uncertainty of the physical
+world? The gap between algorithms that work in simulation and ones that perform
+reliably on real hardware is where the most important research challenges emerge.
+
+Prof. Jara Uitto's Massively Parallel Algorithms project (4209) resonates with a failure I
+remember vividly. When I built a concurrent messaging system, everything collapsed
+under load. I spent days untangling race conditions, watching elegant logic fail at scale.
+Prof. Uitto's work on MPC algorithms for graph matchings, building theoretical
+foundations for MapReduce and Spark, is exactly the framework I have been reaching
+for.
+
+Prof. Antti Oulasvirta's AI Alignment project (2303) connects directly to my work among
+a team of 5 on adaptive VR for IBM. We integrated 4 SkillsBuild modules, but the real
+challenge was coordinating when all our approaches failed. One teammate wanted
+hardcoded responses, another pushed for pure ML. I facilitated the compromise: a
+curated database of expert-written responses with AI-driven selection based on user
+context. Prof. Oulasvirta's research on combining expert demonstrations with learned
+preferences is the rigorous framework for exactly this challenge.
+
+The UniHand project (2309) extends Prof. Oulasvirta's decade of hand tracking research.
+My sprint form analysis required a tracking of 33 body landmarks across 100+ frames,
+and my first pipeline crashed on all possible edge cases. Rebuilding it taught me that
+noisy data is not a bug, it is the starting condition. UniHand's challenge, unified hand
+control despite partial observations, is the formalization of what I learned through trial
+and error.
+
+I have spent the past years moving between mathematical proofs and physical hardware,
+between failed prototypes and the documentation that made the next attempt better.
+Aalto is where I want to continue that work, ready to contribute from day one.
+
+Available June to August 2026, full commitment.
+
+Yours faithfully,
+
+Renan Lavirotte
+
+

@@ -1,0 +1,43 @@
+This is the technical recommendation of the project in the PRD I made:
+
+Backend & Data Pipeline
+
+Language: Python 3.10+.
+
+Scraping Engine: Playwright (Headless browser automation).
+
+Proxy/Anti-Bot: ScraperAPI (Free Tier).
+
+Discovery: DuckDuckGo Search (Python Lib) to find new procurement portal URLs dynamically.
+
+AI Parsing: Gemini API (Flash Model) — High speed, low cost parsing of scraped text.
+
+Financial Data: yfinance library — For retrieving stock symbols.
+
+Orchestration: GitHub Actions — For CRON scheduling (Daily runs).
+
+Database & API
+
+Platform: Supabase.
+
+Database: PostgreSQL.
+
+Auth: Supabase Auth (Email/Magic Link).
+
+API Interface: Supabase JS Client (Frontend) + Direct SQL/Python Client (Backend Scraper).
+
+Frontend
+
+Framework: React (Vite).
+
+Hosting: Vercel (Free Tier).
+
+UI Library: MUI (Material UI) v5/v6.
+
+Configuration: Custom Theme to force Material Design 3 (remove shadows, apply color tokens).
+
+Key Component: MUI X DataGrid (Free Community Version) for the main leads table.
+
+-- 
+
+I want you to analyze this and cross reference it with the project files we have here, and see what has already been done, and those that haven't been. This is so you have context of what already done and what you need to do. So, create a recommendation if this technical recomendations need to be changed (backend), based on the codebase we have. Do not make changes yet, but put it in an evaluation.md.

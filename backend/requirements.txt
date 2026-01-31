@@ -1,0 +1,25 @@
+# CareerGold Backend Dependencies
+# ================================
+# Install with: pip install -r requirements.txt
+# Note: Tested with Python 3.11/3.12, Python 3.13 may have issues
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Database
+supabase>=2.3.0
+
+# AI / Parsing
+google-generativeai>=0.3.0
+
+# Web Scraping
+ddgs>=6.0.0
+playwright>=1.40.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Utilities (let pip resolve compatible versions)
+pydantic>=2.5.0
+pydantic-settings>=2.1.0

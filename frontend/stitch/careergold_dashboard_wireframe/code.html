@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareerGold Dashboard Wireframe</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#b7860b", // Gold from theme rules
+                        "m3-purple": "#6750A4", // Requesting purple/blue for wireframe phase
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#221d10",
+                        "wireframe-gray": "#e2e8f0",
+                        "wireframe-border": "#cbd5e1"
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .wireframe-pattern {
+            background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Navigation Rail (Material Design 3 style) -->
+<aside class="w-20 flex flex-col items-center py-6 border-r border-wireframe-border bg-white dark:bg-zinc-900 z-20">
+<div class="mb-10">
+<div class="size-10 rounded-xl bg-m3-purple flex items-center justify-center text-white">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+</div>
+<nav class="flex flex-col gap-8 flex-1">
+<button class="flex flex-col items-center gap-1 group">
+<div class="p-2 rounded-full bg-m3-purple/10 text-m3-purple group-hover:bg-m3-purple/20 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Search</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-slate-400 hover:text-m3-purple transition-colors">
+<div class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800">
+<span class="material-symbols-outlined">bookmark</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider">Saved</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-slate-400 hover:text-m3-purple transition-colors">
+<div class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider">Settings</span>
+</button>
+</nav>
+<div class="mt-auto">
+<div class="size-10 rounded-full border-2 border-wireframe-border flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCh5NoxgABEJ2vUs-mf4XjW_5CSOkprf5z38NON2WEnvI2OfYhsAI_L4cAuPm6UPsBdP51qga3LBwfIQPLhFEcN85zoLML-2yNRKQp9UpS0wmIJ8hQoOn16l1egwfyazTkzRZy_FCcByNWgEeZ7TfG4uI6oBO8fW68-G1bFce6ZKhA7vLScOscC2qoP9LeMZ1iHQx8qkaA7Sn73KCS3_ObY8EnZqDUj8ZgKiwSr6Ep5apFsyasoSNRIiQd0EZOaUD7Dd_C1ddBLdZc"/>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col relative overflow-y-auto wireframe-pattern">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-wireframe-border px-8 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">dashboard</span>
+<h2 class="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 uppercase">Dashboard</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+<input class="pl-10 pr-4 py-2 w-64 rounded-lg border border-wireframe-border bg-slate-50 focus:ring-2 focus:ring-m3-purple/20 focus:border-m3-purple outline-none transition-all" placeholder="Global search..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+</button>
+</div>
+</div>
+</header>
+<!-- Page Heading -->
+<section class="px-8 pt-8 pb-4">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">Top Matches</h1>
+<p class="text-slate-500 mt-2 font-medium">12 technical roles identified based on your profile scan</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 border border-wireframe-border rounded-lg bg-white font-bold text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-lg">tune</span>
+                            Filter Results
+                        </button>
+</div>
+</div>
+</section>
+<!-- Job Grid -->
+<section class="p-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Job Card 1 -->
+<div class="bg-white dark:bg-zinc-800 border border-wireframe-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-zinc-700 border border-wireframe-border flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400">corporate_fare</span>
+</div>
+<span class="px-2 py-1 bg-m3-purple/10 text-m3-purple text-[10px] font-bold uppercase rounded border border-m3-purple/20">98% Match</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-m3-purple transition-colors">Software Engineer Intern</h3>
+<p class="text-slate-600 dark:text-zinc-400 text-sm font-medium">Tech Corp Systems</p>
+<div class="mt-4 flex flex-col gap-2">
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                San Francisco, CA (Remote)
+                            </div>
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">group</span>
+                                45 Applicants
+                            </div>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+<span class="text-[10px] text-slate-400 font-bold uppercase">Posted 2h ago</span>
+<button class="text-m3-purple font-bold text-xs flex items-center gap-1">
+                                Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Job Card 2 -->
+<div class="bg-white dark:bg-zinc-800 border border-wireframe-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-zinc-700 border border-wireframe-border flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400">package_2</span>
+</div>
+<span class="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase rounded border border-wireframe-border">85% Match</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-m3-purple transition-colors">Product Management Lead</h3>
+<p class="text-slate-600 dark:text-zinc-400 text-sm font-medium">Productify Inc.</p>
+<div class="mt-4 flex flex-col gap-2">
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                New York, NY
+                            </div>
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">group</span>
+                                12 Applicants
+                            </div>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+<span class="text-[10px] text-slate-400 font-bold uppercase">Posted 1d ago</span>
+<button class="text-m3-purple font-bold text-xs flex items-center gap-1">
+                                Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Job Card 3 -->
+<div class="bg-white dark:bg-zinc-800 border border-wireframe-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-zinc-700 border border-wireframe-border flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400">database</span>
+</div>
+<span class="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase rounded border border-wireframe-border">72% Match</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-m3-purple transition-colors">Data Analyst Graduate</h3>
+<p class="text-slate-600 dark:text-zinc-400 text-sm font-medium">DataLog Solutions</p>
+<div class="mt-4 flex flex-col gap-2">
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                Austin, TX
+                            </div>
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm">group</span>
+                                88 Applicants
+                            </div>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+<span class="text-[10px] text-slate-400 font-bold uppercase">Posted 5h ago</span>
+<button class="text-m3-purple font-bold text-xs flex items-center gap-1">
+                                Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Job Card 4 (Blueprint style) -->
+<div class="bg-slate-50/50 dark:bg-zinc-800/50 border-2 border-dashed border-wireframe-border rounded-xl p-5 flex flex-col items-center justify-center min-h-[220px]">
+<span class="material-symbols-outlined text-wireframe-border text-4xl mb-2">work_outline</span>
+<p class="text-slate-400 font-bold text-sm">Pending Scrape Results...</p>
+</div>
+</div>
+</section>
+<!-- Floating Action Button (FAB) -->
+<div class="fixed bottom-10 right-10 flex flex-col items-end gap-4 z-30">
+<button class="flex items-center gap-3 bg-m3-purple hover:bg-m3-purple/90 text-white font-bold py-4 px-6 rounded-xl shadow-xl shadow-m3-purple/20 transition-all hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined">data_object</span>
+<span>RUN SCRAPE</span>
+</button>
+</div>
+<!-- Blueprint Metadata Footer -->
+<footer class="mt-auto p-8 border-t border-wireframe-border bg-slate-100/50 flex flex-col md:flex-row justify-between text-slate-400 text-[10px] font-bold uppercase tracking-widest gap-4">
+<div class="flex gap-6">
+<span>BUILD: v0.4.2-alpha</span>
+<span>ENV: STAGING_WIREFRAME</span>
+<span>MD3_GRID_8DP</span>
+</div>
+<div>
+                    CAREERGOLD DASHBOARD • BLUEPRINT MODE
+                </div>
+</footer>
+</main>
+</div>
+</body></html>

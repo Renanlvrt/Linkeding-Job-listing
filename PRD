@@ -1,0 +1,169 @@
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+
+Project NameCareerGold (Working Title)Version1.0 (MVP)StatusDraftTarget AudienceUndergraduate Students
+
+Export to Sheets
+
+EXECUTIVE SUMMARY
+Vision
+
+To democratize job hunting for students by providing a clutter-free, intelligent "Opportunity Finder" that cuts through the noise of LinkedIn. CareerGold automates the search for roles perfectly matched to a student's specific skill set, presenting data in a pristine, distraction-free interface.
+
+The "Why"
+
+Undergraduate students often feel overwhelmed by LinkedIn’s chaotic feed and generic search algorithms. They waste hours manually filtering roles that don't match their actual skills. CareerGold solves this by scraping, aggregating, and filtering listing data into a single, clean dashboard, allowing students to focus on applying rather than searching.
+
+Aesthetic Goal
+
+"Premium Minimalist." The interface will feel like a high-end tool—clean, spacious, and purposeful. It rejects the "noisy" blue/grey of standard social media in favor of a sophisticated White & Gold palette that signals value and clarity.
+
+USER PERSONAS & FLOWS
+Persona A: "The Proactive Junior" (Liam)
+
+Goals: Wants a summer internship in Data Science but has a limited skill set (Python, SQL).
+
+Frustrations: Applies to "Entry Level" jobs that actually require 5 years of experience.
+
+Behavior: Checks for new listings daily between classes.
+
+Persona B: "The Strategic Senior" (Maya)
+
+Goals: Securing a full-time Grad Role in Marketing before graduation.
+
+Frustrations: Seeing the same promoted job posts repeatedly; needs to know "applicant count" to gauge competition.
+
+Behavior: Batch-applies on weekends; needs a saved list of "High Match" roles.
+
+The Happy Path (Primary Flow)
+
+Onboarding: User inputs their core skills (e.g., "Python," "Public Speaking") and desired location.
+
+Dashboard: User sees a clean, whitespace-heavy list of "New Opportunities."
+
+Action: User clicks "Refresh/Scrape" → The app fetches live LinkedIn data.
+
+Review: User clicks a Job Card. A Side Sheet slides in with the job description, location, and applicant count.
+
+Decision: User clicks "Save" (Gold Star icon) or "Apply" (External Link).
+
+UI/UX SPECIFICATIONS (Material Design 3)
+Color Strategy
+
+Seed Color: Metallic Gold (#B8860B).
+
+Note: Pure bright gold (#FFD700) has poor contrast on white. We use a darker "Metallic Gold" for the seed to generate accessible tonal palettes.
+
+Palette Mapping:
+
+Primary: Metallic Gold (Used for the "Run Scrape" FAB and active states).
+
+On-Primary: White (Text/Icons on gold buttons).
+
+Surface / Background: Pure White (#FFFFFF).
+
+Surface Variant: Alabaster / Very Light Grey (Used for card backgrounds to distinguish from the white page).
+
+Outline: Soft Gold (For borders on inputs).
+
+Typography
+
+Font Family: Outfit or Plus Jakarta Sans.
+
+Why? Geometric, modern, and readable—fits the "Premium/Gold" aesthetic better than standard Roboto.
+
+Type Scale:
+
+Headline Medium: Dashboard Titles (e.g., "Top Matches").
+
+Title Medium: Job Titles on cards.
+
+Label Large: Action buttons (e.g., "Apply Now").
+
+Body Medium: Job descriptions.
+
+Component Usage (M3)
+
+Navigation: Navigation Rail (Left side) for desktop/tablet. Clean icons for "Search," "Saved," "Settings."
+
+Cards: Elevated Card (Level 1). White card on white background with a subtle shadow to create depth without "lines."
+
+Details View: Side Sheet (Modal). When a job is clicked, it slides in from the right, keeping the user in context of their search results (does not navigate away).
+
+Input: Outlined Text Fields with Gold focus rings for skill entry.
+
+Elevation & Shape
+
+Corner Radius: 16px (M3 Standard). Soft, friendly, but professional.
+
+Elevation: Minimal. Use 0dp for the background and 1dp for cards.
+
+FUNCTIONAL REQUIREMENTS (MoSCoW)
+Must Have (MVP)
+
+User Inputs: Fields for Job Title, Location, and Skill Keywords.
+
+Scraping Engine: Bot that searches LinkedIn based on inputs.
+
+Data Parsing: Extract Job Title, Company Name, Location, Link, and Applicant Count.
+
+Skill Matcher: Simple logic to highlight keywords in the job description that match user's profile.
+
+Results Feed: Infinite scroll or paginated list of found jobs.
+
+Should Have (Post-MVP)
+
+"Easy Apply" Filter: Toggle to show only jobs with "Easy Apply" enabled.
+
+Export: Button to export the list to CSV/Excel.
+
+Date Posted: Filter by "Past 24 hours" vs "Past Week."
+
+Could Have
+
+AI Resume Tailor: Generate a cover letter snippet based on the job description.
+
+Salary Predictor: Scrape salary data (if available) or estimate based on role.
+
+Won't Have (Out of Scope)
+
+Auto-Apply: The bot will find jobs, not apply for them (avoids high risk of bans).
+
+LinkedIn Messaging: No social features.
+
+TECHNICAL RECOMMENDATIONS
+Tech Stack
+
+Frontend: React with MUI (Material UI).
+
+Reason: MUI v5 has excellent Material Design 3 support and allows custom theming to easily implement the "Gold/White" palette.
+
+Backend: Python (FastAPI).
+
+Reason: Python is king for scraping. FastAPI is lightweight and fast for serving the results to the React frontend.
+
+Database: Supabase (PostgreSQL).
+
+Reason: Easy to set up, free tier is generous, and handles auth/data perfectly (as seen in the referenced video).
+
+Scraping Strategy (Crucial)
+
+Tool: Playwright or Selenium.
+
+Warning: LinkedIn is aggressive against scrapers.
+
+MVP Approach: Use a "Headless Browser" (Playwright) that logs in with a dummy student account (user provided session cookie) to view listings.
+
+Alternative: Use a rapid API (e.g., Proxycurl or RapidAPI LinkedIn Scrapers) to fetch data safely without maintaining your own delicate scraper.
+
+Engineering Notes
+
+Rate Limiting: Implement strict delays (e.g., "Wait 5-10 seconds between page loads") to prevent the student's account from being flagged.
+
+State Management: Use TanStack Query in React to handle the "Live Feed" state effectively.
+
+I Built a Lead Scraper SaaS in 15 mins with 3 Free Google AI Tools (Gemini, Stitch, Antigravity)
+
+Andy Lo · 13k views​
+
+
+The stitch is located in: frontend/stitch
