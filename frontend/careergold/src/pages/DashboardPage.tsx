@@ -1,20 +1,18 @@
-import { useState } from 'react'
-import {
-    Box,
-    Typography,
-    Button,
-    Fab,
-    Grid,
-    Card,
-    CardContent,
-} from '@mui/material'
+import { Box, Typography, Button, Fab, Grid, Card, CardContent, CircularProgress } from '@mui/material'
 import RoleCard from '../components/roles/RoleCard'
 import JobDetailsSideSheet from '../components/roles/JobDetailsSideSheet'
-import { mockJobs, Job } from '../mocks/data'
+import { Job } from '../mocks/data'
+import { useJobs } from '../hooks/useJobs'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function DashboardPage() {
     const [selectedJob, setSelectedJob] = useState<Job | null>(null)
     const [sideSheetOpen, setSideSheetOpen] = useState(false)
+    const navigate = useNavigate()
+
+    // Fetch real jobs from Supabase
+    const { data: jobs, isLoading, error } = useJobs({ limit: 20 })
 
     const handleJobClick = (job: Job) => {
         setSelectedJob(job)
@@ -24,6 +22,21 @@ export default function DashboardPage() {
     const handleCloseSideSheet = () => {
         setSideSheetOpen(false)
     }
+
+    // Map Supabase jobs to the Job type expected by RoleCard
+    const displayJobs: Job[] = (jobs || []).map(j => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        location: j.location || 'Remote',
+        matchScore: j.match_score,
+        applicants: j.applicants || 0,
+        postedAgo: j.scraped_at ? getTimeAgo(j.scraped_at) : 'Recently',
+        status: j.status as Job['status'],
+        salaryRange: undefined,
+        description: j.description || undefined,
+        skills: j.skills_matched || [],
+    }))
 
     return (
         <Box sx={{ position: 'relative', minHeight: '100%' }}>
@@ -41,7 +54,7 @@ export default function DashboardPage() {
                             Top Matches
                         </Typography>
                         <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1, fontWeight: 500 }}>
-                            {mockJobs.length} technical roles identified based on your profile scan
+                            {isLoading ? 'Loading...' : `${displayJobs.length} roles from Supabase database`}
                         </Typography>
                     </Box>
                     <Button
@@ -66,41 +79,32 @@ export default function DashboardPage() {
 
             {/* Job Grid */}
             <Box sx={{ p: 4 }}>
-                <Grid container spacing={3}>
-                    {mockJobs.map((job) => (
-                        <Grid item xs={12} md={6} lg={4} key={job.id}>
-                            <RoleCard job={job} onClick={() => handleJobClick(job)} />
-                        </Grid>
-                    ))}
-
-                    {/* Placeholder Card (pending scrape) */}
-                    <Grid item xs={12} md={6} lg={4}>
-                        <Card
-                            sx={{
-                                bgcolor: 'rgba(248, 247, 245, 0.5)',
-                                border: '2px dashed',
-                                borderColor: 'divider',
-                                minHeight: 220,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <CardContent sx={{ textAlign: 'center' }}>
-                                <span
-                                    className="material-symbols-outlined"
-                                    style={{ fontSize: 40, color: '#cbd5e1', marginBottom: 8 }}
-                                >
-                                    work_outline
-                                </span>
-                                <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                                    Pending Scrape Results...
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                {isLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : error ? (
+                    <Typography color="error">Failed to load jobs: {String(error)}</Typography>
+                ) : displayJobs.length === 0 ? (
+                    <Card sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#9ca3af' }}>search_off</span>
+                        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>No jobs in database yet</Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                            Head to the Lead Scraper to discover and save jobs.
+                        </Typography>
+                        <Button variant="contained" onClick={() => navigate('/scraper')}>
+                            Go to Scraper
+                        </Button>
+                    </Card>
+                ) : (
+                    <Grid container spacing={3}>
+                        {displayJobs.map((job) => (
+                            <Grid item xs={12} md={6} lg={4} key={job.id}>
+                                <RoleCard job={job} onClick={() => handleJobClick(job)} />
+                            </Grid>
+                        ))}
                     </Grid>
-                </Grid>
+                )}
             </Box>
 
             {/* Floating Action Button (FAB) */}
@@ -115,6 +119,7 @@ export default function DashboardPage() {
                 <Fab
                     variant="extended"
                     color="secondary"
+                    onClick={() => navigate('/scraper')}
                     sx={{
                         bgcolor: '#6750A4',
                         '&:hover': {
@@ -153,11 +158,11 @@ export default function DashboardPage() {
                 }}
             >
                 <Box sx={{ display: 'flex', gap: 4 }}>
-                    <span>BUILD: v0.4.2-alpha</span>
-                    <span>ENV: STAGING_WIREFRAME</span>
+                    <span>BUILD: v0.5.0-supabase</span>
+                    <span>ENV: {import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'}</span>
                     <span>MD3_GRID_8DP</span>
                 </Box>
-                <span>CAREERGOLD DASHBOARD • BLUEPRINT MODE</span>
+                <span>CAREERGOLD DASHBOARD • SUPABASE CONNECTED</span>
             </Box>
 
             {/* Job Details Side Sheet */}
@@ -168,4 +173,17 @@ export default function DashboardPage() {
             />
         </Box>
     )
+}
+
+// Helper function
+function getTimeAgo(dateString: string): string {
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (seconds < 60) return 'Just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+    return `${Math.floor(seconds / 604800)}w ago`
 }

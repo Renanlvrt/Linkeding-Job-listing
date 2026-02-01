@@ -1,40 +1,78 @@
 """
-Scraper API Router
-===================
-Endpoints for triggering and monitoring scrape jobs.
+Scraper API Router (HARDENED)
+==============================
+Endpoints with authentication, rate limiting, and input sanitization.
 """
 
-from fastapi import APIRouter, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 import uuid
+import re
 
 from app.scraper.orchestrator import orchestrator
 from app.scraper.discovery import job_discovery
 from app.scraper.linkedin_api import linkedin_client
+from app.middleware.security import (
+    verify_jwt, 
+    optional_jwt,
+    check_rate_limit, 
+    check_scraper_rate_limit,
+    sanitize_string,
+    sanitize_job_data,
+    log_request,
+)
 
 router = APIRouter()
 
 
 # ============================================================
-# Pydantic Models
+# Pydantic Models with Validation
 # ============================================================
 
 class ScrapeRequest(BaseModel):
-    """Request to start a scrape job."""
-    keywords: str
-    location: Optional[str] = "Remote"
-    user_skills: Optional[list[str]] = None  # For match scoring
-    max_results: int = 20
-    use_rapidapi: bool = False  # Uses quota if True!
+    """Request to start a scrape job - with input validation."""
+    keywords: str = Field(..., min_length=2, max_length=100)
+    location: Optional[str] = Field("Remote", max_length=100)
+    user_skills: Optional[list[str]] = Field(None, max_length=50)
+    max_results: int = Field(20, ge=1, le=100)
+    use_rapidapi: bool = False
+
+    @field_validator('keywords', 'location', mode='before')
+    @classmethod
+    def sanitize_text(cls, v):
+        if isinstance(v, str):
+            # Remove any potential injection attempts
+            v = sanitize_string(v, 100)
+            # Block suspicious patterns
+            if re.search(r'[<>{}|\\^~\[\]]', v):
+                raise ValueError("Invalid characters in input")
+        return v
+
+    @field_validator('user_skills', mode='before')
+    @classmethod
+    def sanitize_skills(cls, v):
+        if isinstance(v, list):
+            return [sanitize_string(s, 50) for s in v[:50]]
+        return v
 
 
 class QuickSearchRequest(BaseModel):
-    """Request for quick discovery (free, no enrichment)."""
-    keywords: str
-    location: Optional[str] = ""
-    max_results: int = 10
+    """Quick discovery request with validation."""
+    keywords: str = Field(..., min_length=2, max_length=100)
+    location: Optional[str] = Field("", max_length=100)
+    max_results: int = Field(10, ge=1, le=50)
+    date_filter: str = Field("week", pattern="^(day|week|month)$")
+
+    @field_validator('keywords', 'location', mode='before')
+    @classmethod
+    def sanitize_text(cls, v):
+        if isinstance(v, str):
+            v = sanitize_string(v, 100)
+            if re.search(r'[<>{}|\\^~\[\]]', v):
+                raise ValueError("Invalid characters in input")
+        return v
 
 
 class ScrapeResponse(BaseModel):
@@ -44,20 +82,8 @@ class ScrapeResponse(BaseModel):
     message: str
 
 
-class ScrapeStatus(BaseModel):
-    """Status of a scrape run."""
-    run_id: str
-    status: str
-    jobs_found: int
-    progress: int  # 0-100
-    started_at: str
-    completed_at: Optional[str] = None
-    error: Optional[str] = None
-    jobs: Optional[list] = None
-
-
 # ============================================================
-# In-memory store for scrape runs
+# In-memory store (consider Redis for production)
 # ============================================================
 
 SCRAPE_RUNS: dict[str, dict] = {}
@@ -74,13 +100,13 @@ async def run_scrape_job(
     user_skills: list[str],
     max_results: int,
     use_rapidapi: bool,
+    user_id: Optional[str],
 ):
-    """Background task to run a full scrape job."""
+    """Background task for scraping - logs user who initiated."""
     try:
         SCRAPE_RUNS[run_id]["status"] = "RUNNING"
         SCRAPE_RUNS[run_id]["progress"] = 10
         
-        # Run the orchestrator
         result = await orchestrator.run_scrape(
             keywords=keywords,
             location=location,
@@ -89,37 +115,45 @@ async def run_scrape_job(
             use_rapidapi=use_rapidapi,
         )
         
+        # Sanitize job data before storing
+        sanitized_jobs = [sanitize_job_data(job) for job in result.get("jobs", [])]
+        
         SCRAPE_RUNS[run_id]["status"] = "COMPLETED"
         SCRAPE_RUNS[run_id]["progress"] = 100
-        SCRAPE_RUNS[run_id]["jobs_found"] = result.get("jobs_found", 0)
-        SCRAPE_RUNS[run_id]["jobs"] = result.get("jobs", [])
+        SCRAPE_RUNS[run_id]["jobs_found"] = len(sanitized_jobs)
+        SCRAPE_RUNS[run_id]["jobs"] = sanitized_jobs
         SCRAPE_RUNS[run_id]["completed_at"] = datetime.utcnow().isoformat()
         SCRAPE_RUNS[run_id]["sources"] = result.get("sources", {})
         SCRAPE_RUNS[run_id]["rapidapi_remaining"] = result.get("rapidapi_remaining")
         
     except Exception as e:
         SCRAPE_RUNS[run_id]["status"] = "FAILED"
-        SCRAPE_RUNS[run_id]["error"] = str(e)
+        SCRAPE_RUNS[run_id]["error"] = "Scrape failed"  # Don't leak internal errors
         SCRAPE_RUNS[run_id]["completed_at"] = datetime.utcnow().isoformat()
+        
+        import logging
+        logging.getLogger("scraper").error(f"Scrape {run_id} failed: {e}", exc_info=True)
 
 
 # ============================================================
-# Endpoints
+# Endpoints (with security dependencies)
 # ============================================================
 
-@router.post("/start", response_model=ScrapeResponse)
-async def start_scrape(request: ScrapeRequest, background_tasks: BackgroundTasks):
+@router.post("/start", response_model=ScrapeResponse, dependencies=[Depends(check_scraper_rate_limit)])
+async def start_scrape(
+    request: ScrapeRequest, 
+    background_tasks: BackgroundTasks,
+    req: Request,
+    claims: dict = Depends(verify_jwt),  # REQUIRE authentication
+):
     """
-    Start a new scrape job.
+    Start a new scrape job. REQUIRES AUTHENTICATION.
     
-    - **keywords**: Job title or keywords to search
-    - **location**: Location filter (default: Remote)
-    - **user_skills**: Your skills for match scoring (optional)
-    - **max_results**: Maximum jobs to return (default: 20)
-    - **use_rapidapi**: Set to true to use RapidAPI (USES QUOTA!)
-    
-    Returns a run_id to check status.
+    Rate limited: 10 requests per minute.
     """
+    user_id = claims.get("sub")
+    log_request(req, user_id)
+    
     run_id = str(uuid.uuid4())
     
     SCRAPE_RUNS[run_id] = {
@@ -133,9 +167,9 @@ async def start_scrape(request: ScrapeRequest, background_tasks: BackgroundTasks
         "completed_at": None,
         "error": None,
         "jobs": [],
+        "user_id": user_id,  # Track who started it
     }
     
-    # Start background task
     background_tasks.add_task(
         run_scrape_job,
         run_id,
@@ -144,63 +178,90 @@ async def start_scrape(request: ScrapeRequest, background_tasks: BackgroundTasks
         request.user_skills or [],
         request.max_results,
         request.use_rapidapi,
+        user_id,
     )
     
     return ScrapeResponse(
         run_id=run_id,
         status="QUEUED",
-        message=f"Scrape started for '{request.keywords}' in {request.location}",
+        message=f"Scrape started for '{request.keywords}'",
     )
 
 
-@router.post("/quick")
-async def quick_search(request: QuickSearchRequest):
+@router.post("/quick", dependencies=[Depends(check_rate_limit)])
+async def quick_search(
+    request: QuickSearchRequest,
+    req: Request,
+    claims: Optional[dict] = Depends(optional_jwt),  # Optional auth
+):
     """
     Quick job discovery - FREE and INSTANT.
     
-    Uses DuckDuckGo only (no RapidAPI, no Gemini).
-    Great for testing or quick searches.
+    Optional authentication. Rate limited: 100 requests per minute.
     """
+    user_id = claims.get("sub") if claims else None
+    log_request(req, user_id)
+    
     jobs = job_discovery.search_linkedin_jobs(
         keywords=request.keywords,
         location=request.location,
         max_results=request.max_results,
+        date_filter=request.date_filter,
     )
+    
+    # Sanitize scraped data
+    sanitized_jobs = [sanitize_job_data(job) for job in jobs]
     
     return {
         "status": "OK",
         "keywords": request.keywords,
         "location": request.location,
-        "jobs_found": len(jobs),
-        "jobs": jobs,
+        "jobs_found": len(sanitized_jobs),
+        "jobs": sanitized_jobs,
     }
 
 
-@router.get("/status/{run_id}")
-async def get_scrape_status(run_id: str):
-    """Get the status of a scrape job."""
-    if run_id not in SCRAPE_RUNS:
-        return {
-            "run_id": run_id,
-            "status": "NOT_FOUND",
-            "error": "Run not found",
-        }
+@router.get("/status/{run_id}", dependencies=[Depends(check_rate_limit)])
+async def get_scrape_status(
+    run_id: str,
+    req: Request,
+    claims: dict = Depends(verify_jwt),  # REQUIRE auth
+):
+    """Get scrape status. User can only see their own runs."""
+    user_id = claims.get("sub")
     
-    return SCRAPE_RUNS[run_id]
+    if run_id not in SCRAPE_RUNS:
+        return {"run_id": run_id, "status": "NOT_FOUND", "error": "Run not found"}
+    
+    run = SCRAPE_RUNS[run_id]
+    
+    # SECURITY: Only allow users to see their own scrape runs
+    if run.get("user_id") != user_id:
+        return {"run_id": run_id, "status": "NOT_FOUND", "error": "Run not found"}
+    
+    return run
 
 
-@router.get("/runs")
-async def list_scrape_runs():
-    """List all scrape runs (without full job data)."""
-    return [
+@router.get("/runs", dependencies=[Depends(check_rate_limit)])
+async def list_scrape_runs(
+    claims: dict = Depends(verify_jwt),  # REQUIRE auth
+):
+    """List user's scrape runs (without full job data)."""
+    user_id = claims.get("sub")
+    
+    # Only return runs belonging to this user
+    user_runs = [
         {k: v for k, v in run.items() if k != "jobs"}
         for run in SCRAPE_RUNS.values()
+        if run.get("user_id") == user_id
     ]
+    
+    return user_runs
 
 
 @router.get("/quota")
 async def get_rapidapi_quota():
-    """Check RapidAPI quota status."""
+    """Check RapidAPI quota status. Public endpoint."""
     return {
         "requests_remaining": linkedin_client.requests_remaining,
         "monthly_limit": 100,
@@ -208,12 +269,24 @@ async def get_rapidapi_quota():
     }
 
 
-@router.post("/cancel/{run_id}")
-async def cancel_scrape(run_id: str):
-    """Cancel a running scrape job."""
-    if run_id in SCRAPE_RUNS:
-        SCRAPE_RUNS[run_id]["status"] = "CANCELLED"
-        SCRAPE_RUNS[run_id]["completed_at"] = datetime.utcnow().isoformat()
-        return {"message": "Scrape cancelled", "run_id": run_id}
+@router.post("/cancel/{run_id}", dependencies=[Depends(check_rate_limit)])
+async def cancel_scrape(
+    run_id: str,
+    claims: dict = Depends(verify_jwt),  # REQUIRE auth
+):
+    """Cancel a running scrape job. User can only cancel their own."""
+    user_id = claims.get("sub")
     
-    return {"error": "Run not found", "run_id": run_id}
+    if run_id not in SCRAPE_RUNS:
+        return {"error": "Run not found", "run_id": run_id}
+    
+    run = SCRAPE_RUNS[run_id]
+    
+    # SECURITY: Only allow users to cancel their own runs
+    if run.get("user_id") != user_id:
+        return {"error": "Run not found", "run_id": run_id}
+    
+    SCRAPE_RUNS[run_id]["status"] = "CANCELLED"
+    SCRAPE_RUNS[run_id]["completed_at"] = datetime.utcnow().isoformat()
+    
+    return {"message": "Scrape cancelled", "run_id": run_id}

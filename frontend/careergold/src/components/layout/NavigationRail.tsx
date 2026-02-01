@@ -6,6 +6,7 @@ import {
     Tooltip,
     Avatar,
 } from '@mui/material'
+import { useAuth } from '../../contexts/AuthContext'
 
 // Navigation items matching Stitch wireframe
 const navItems = [
@@ -22,8 +23,17 @@ export default function NavigationRail() {
     const navigate = useNavigate()
     const location = useLocation()
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+    const { user, signOut } = useAuth()
 
     const isActive = (path: string) => location.pathname.startsWith(path)
+
+    const handleLogout = async () => {
+        await signOut()
+        navigate('/login')
+    }
+
+    // Get user initial for avatar
+    const userInitial = user?.email?.charAt(0).toUpperCase() || 'G'
 
     return (
         <Box
@@ -114,8 +124,9 @@ export default function NavigationRail() {
 
             {/* User Avatar (bottom) */}
             <Box sx={{ mt: 'auto' }}>
-                <Tooltip title="Logout" placement="right">
+                <Tooltip title={user ? 'Sign out' : 'Sign in'} placement="right">
                     <IconButton
+                        onClick={user ? handleLogout : () => navigate('/login')}
                         sx={{
                             width: 40,
                             height: 40,
@@ -127,23 +138,28 @@ export default function NavigationRail() {
                             },
                         }}
                     >
-                        <span className="material-symbols-outlined">logout</span>
+                        <span className="material-symbols-outlined">{user ? 'logout' : 'login'}</span>
                     </IconButton>
                 </Tooltip>
             </Box>
-            <Avatar
-                sx={{
-                    width: 40,
-                    height: 40,
-                    mt: 2,
-                    border: 2,
-                    borderColor: 'divider',
-                    bgcolor: 'primary.light',
-                    cursor: 'pointer',
-                }}
-            >
-                R
-            </Avatar>
+            <Tooltip title={user?.email || 'Guest'} placement="right">
+                <Avatar
+                    sx={{
+                        width: 40,
+                        height: 40,
+                        mt: 2,
+                        border: 2,
+                        borderColor: user ? 'primary.main' : 'divider',
+                        bgcolor: user ? 'primary.light' : 'grey.300',
+                        cursor: 'pointer',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                    }}
+                    onClick={() => navigate(user ? '/settings' : '/login')}
+                >
+                    {userInitial}
+                </Avatar>
+            </Tooltip>
         </Box>
     )
 }

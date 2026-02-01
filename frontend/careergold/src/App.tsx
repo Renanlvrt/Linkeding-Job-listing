@@ -16,7 +16,7 @@ function App() {
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route element={<AppShell />}>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/" element={<Navigate to="/login" replace />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/scraper" element={<LeadScraperPage />} />
                     <Route path="/search" element={<SearchPage />} />

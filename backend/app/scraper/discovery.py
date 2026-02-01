@@ -251,6 +251,33 @@ class JobDiscovery:
         if loc_match:
             job_location = loc_match.group(1).strip()[:50]
         
+        # Extract applicant count from snippet
+        # Patterns: "45 applicants", "Be an early applicant", "Over 100 applicants"
+        applicants = None
+        applicants_match = re.search(
+            r'(\d+)\s*applicant|over\s+(\d+)\s*applicant|be\s+an?\s+early\s+applicant',
+            snippet.lower()
+        )
+        if applicants_match:
+            if "early applicant" in snippet.lower():
+                applicants = 0  # Very few applicants
+            elif applicants_match.group(1):
+                applicants = int(applicants_match.group(1))
+            elif applicants_match.group(2):
+                applicants = int(applicants_match.group(2)) + 50  # "Over X" means more
+        
+        # Extract posted time from snippet
+        # Patterns: "1 month ago", "2 weeks ago", "3 days ago", "1 hour ago"
+        posted_ago = None
+        time_match = re.search(
+            r'(\d+)\s*(hour|day|week|month)s?\s*ago',
+            snippet.lower()
+        )
+        if time_match:
+            num = int(time_match.group(1))
+            unit = time_match.group(2)
+            posted_ago = f"{num} {unit}{'s' if num > 1 else ''} ago"
+        
         return {
             "external_id": external_id,
             "title": job_title[:200],
@@ -260,6 +287,8 @@ class JobDiscovery:
             "snippet": snippet[:500],
             "source": source,
             "discovery_method": "duckduckgo",
+            "applicants": applicants,
+            "posted_ago": posted_ago,
         }
 
 

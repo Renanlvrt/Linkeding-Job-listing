@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import StatusChip from '../components/common/StatusChip'
 import { mockSources } from '../mocks/data'
+import { useSaveScrapedJobs } from '../hooks/useJobs'
 
 // API Base URL - change this when deploying
 const API_BASE = 'http://localhost:8000'
@@ -25,6 +26,9 @@ interface ScrapedJob {
     snippet?: string
     source?: string
     external_id?: string | null
+    applicants?: number | null
+    posted_ago?: string | null
+    location?: string | null
 }
 
 interface ScrapeResult {
@@ -48,10 +52,15 @@ export default function LeadScraperPage() {
     const [location, setLocation] = useState('Remote')
     const [maxResults, setMaxResults] = useState(10)
     const [dateFilter, setDateFilter] = useState('week')
+    const [maxApplicants, setMaxApplicants] = useState(100) // Filter: show jobs with <= this many applicants
     const [results, setResults] = useState<ScrapedJob[]>([])
     const [scrapeHistory, setScrapeHistory] = useState<{ date: string; count: number; keywords: string; status: string }[]>([])
     const [error, setError] = useState<string | null>(null)
     const [quota, setQuota] = useState<QuotaInfo | null>(null)
+    const [savedCount, setSavedCount] = useState(0)
+
+    // Supabase mutation hook
+    const saveJobsMutation = useSaveScrapedJobs()
 
     // Fetch quota on mount
     useEffect(() => {
@@ -194,6 +203,14 @@ export default function LeadScraperPage() {
                                         <option value="week">Last week</option>
                                         <option value="month">Last month</option>
                                     </TextField>
+                                    <TextField
+                                        label="Max Applicants"
+                                        type="number"
+                                        value={maxApplicants}
+                                        onChange={(e) => setMaxApplicants(Number(e.target.value))}
+                                        sx={{ width: 150 }}
+                                        helperText="Filter popular jobs"
+                                    />
                                 </Box>
                             </Box>
                         </CardContent>
@@ -232,46 +249,97 @@ export default function LeadScraperPage() {
                     {results.length > 0 && (
                         <Card sx={{ mb: 3 }}>
                             <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h4" sx={{ mb: 3 }}>
-                                    Found {results.length} Jobs
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {results.map((job, idx) => (
-                                        <Box
-                                            key={idx}
-                                            sx={{
-                                                p: 2,
-                                                borderRadius: 2,
-                                                border: 1,
-                                                borderColor: 'divider',
-                                                '&:hover': { bgcolor: 'grey.50' },
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                                    <Typography variant="h4">
+                                        Found {results.filter(j => !j.applicants || j.applicants <= maxApplicants).length} Jobs
+                                        {results.some(j => j.applicants && j.applicants > maxApplicants) && (
+                                            <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                                                ({results.filter(j => j.applicants && j.applicants > maxApplicants).length} hidden by filter)
+                                            </Typography>
+                                        )}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                        {savedCount > 0 && (
+                                            <Chip label={`${savedCount} saved`} color="success" size="small" />
+                                        )}
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            onClick={async () => {
+                                                try {
+                                                    const jobsToSave = results.filter(j => !j.applicants || j.applicants <= maxApplicants)
+                                                    await saveJobsMutation.mutateAsync(jobsToSave as any)
+                                                    setSavedCount(jobsToSave.length)
+                                                } catch (err) {
+                                                    setError('Failed to save jobs to database')
+                                                }
                                             }}
+                                            disabled={saveJobsMutation.isPending}
+                                            startIcon={<span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span>}
                                         >
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <Box>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                        {job.title}
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                        {job.company}
-                                                    </Typography>
+                                            {saveJobsMutation.isPending ? 'Saving...' : 'Save to Database'}
+                                        </Button>
+                                    </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {results
+                                        .filter(job => !job.applicants || job.applicants <= maxApplicants)
+                                        .map((job, idx) => (
+                                            <Box
+                                                key={idx}
+                                                sx={{
+                                                    p: 2,
+                                                    borderRadius: 2,
+                                                    border: 1,
+                                                    borderColor: 'divider',
+                                                    '&:hover': { bgcolor: 'grey.50' },
+                                                }}
+                                            >
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                            {job.title}
+                                                        </Typography>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                            {job.company}
+                                                            {job.location && ` • ${job.location}`}
+                                                        </Typography>
+                                                        {/* Applicant and Posted badges */}
+                                                        <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                                            {job.applicants !== null && job.applicants !== undefined && (
+                                                                <Chip
+                                                                    size="small"
+                                                                    label={job.applicants === 0 ? 'Early applicant!' : `${job.applicants} applicants`}
+                                                                    color={job.applicants <= 10 ? 'success' : job.applicants <= 50 ? 'warning' : 'default'}
+                                                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                />
+                                                            )}
+                                                            {job.posted_ago && (
+                                                                <Chip
+                                                                    size="small"
+                                                                    label={job.posted_ago}
+                                                                    variant="outlined"
+                                                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                    </Box>
+                                                    <Button
+                                                        size="small"
+                                                        href={job.link}
+                                                        target="_blank"
+                                                        startIcon={<span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>}
+                                                    >
+                                                        View
+                                                    </Button>
                                                 </Box>
-                                                <Button
-                                                    size="small"
-                                                    href={job.link}
-                                                    target="_blank"
-                                                    startIcon={<span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>}
-                                                >
-                                                    View
-                                                </Button>
+                                                {job.snippet && (
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                                                        {job.snippet.slice(0, 150)}...
+                                                    </Typography>
+                                                )}
                                             </Box>
-                                            {job.snippet && (
-                                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-                                                    {job.snippet.slice(0, 150)}...
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    ))}
+                                        ))}
                                 </Box>
                             </CardContent>
                         </Card>

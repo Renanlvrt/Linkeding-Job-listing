@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_key: str = ""
+    supabase_jwt_secret: str = ""  # For HS256 JWT verification (optional)
     
     # Gemini AI
     gemini_api_key: str = ""
@@ -22,7 +23,8 @@ class Settings(BaseSettings):
     rapidapi_key: str = ""
     
     # Frontend URL (for CORS)
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:5173"
+    production_url: str = ""  # Set in production via env var
     
     # Environment
     environment: str = "development"
