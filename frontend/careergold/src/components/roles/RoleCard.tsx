@@ -7,6 +7,7 @@ import {
     IconButton,
 } from '@mui/material'
 import { Job } from '../../mocks/data'
+import { SafeText } from '../../lib/security'
 
 interface RoleCardProps {
     job: Job
@@ -90,10 +91,10 @@ export default function RoleCard({ job, onClick }: RoleCardProps) {
                         },
                     }}
                 >
-                    {job.title}
+                    <SafeText>{job.title}</SafeText>
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                    {job.company}
+                    <SafeText>{job.company}</SafeText>
                 </Typography>
 
                 {/* Location & Applicants */}
@@ -101,7 +102,7 @@ export default function RoleCard({ job, onClick }: RoleCardProps) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>location_on</span>
                         <Typography variant="caption" sx={{ fontSize: '0.75rem', textTransform: 'none', letterSpacing: 0 }}>
-                            {job.location}
+                            <SafeText>{job.location}</SafeText>
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>

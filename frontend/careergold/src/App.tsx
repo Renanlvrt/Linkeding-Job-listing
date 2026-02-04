@@ -9,12 +9,14 @@ import ApplicationsPage from './pages/ApplicationsPage'
 import CVPage from './pages/CVPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
+import AuthCallback from './pages/AuthCallback'
 
 function App() {
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route element={<AppShell />}>
                     <Route path="/" element={<Navigate to="/login" replace />} />
                     <Route path="/dashboard" element={<DashboardPage />} />

@@ -12,6 +12,8 @@ import {
     Divider,
     Alert,
 } from '@mui/material'
+import { supabase } from '../lib/supabase'
+import { sanitizeJobData } from '../lib/security'
 import StatusChip from '../components/common/StatusChip'
 import { mockSources } from '../mocks/data'
 import { useSaveScrapedJobs } from '../hooks/useJobs'
@@ -85,10 +87,14 @@ export default function LeadScraperPage() {
 
         try {
             // Call the real backend API
+            const { data: { session } } = await supabase.auth.getSession()
+            const token = session?.access_token
+
             const response = await fetch(`${API_BASE}/api/scraper/quick`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     keywords,
@@ -107,8 +113,11 @@ export default function LeadScraperPage() {
             const data: ScrapeResult = await response.json()
             setProgress(100)
 
-            // Update results
-            setResults(data.jobs)
+            // Update results (sanitize first)
+            const cleanedJobs = data.jobs.map(job =>
+                sanitizeJobData(job as unknown as Record<string, unknown>) as unknown as ScrapedJob
+            )
+            setResults(cleanedJobs)
 
             // Add to history
             setScrapeHistory(prev => [

@@ -33,9 +33,10 @@ export default function ProtectedRoute({ children, requireAuth = false }: Protec
         )
     }
 
-    // If auth is required and user is not logged in, redirect to login
+    // If auth is required and user is not logged in, redirect to login with next param
     if (requireAuth && !user) {
-        return <Navigate to="/login" state={{ from: location }} replace />
+        const nextPath = encodeURIComponent(location.pathname)
+        return <Navigate to={`/login?next=${nextPath}`} replace />
     }
 
     return <>{children}</>

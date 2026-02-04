@@ -1,44 +1,46 @@
 /**
  * Login Page
  * ===========
- * Magic link authentication with Supabase.
+ * Uses official Supabase Auth UI for secure authentication.
+ * 
+ * Features:
+ * - Password login
+ * - Magic link email
+ * - Branded with Supabase for trust
+ * - Auto-redirects to ?next= param after login
+ * 
+ * Security:
+ * - Leverages Supabase's built-in XSS/CSRF protection
+ * - No custom password handling
+ * - Rate-limited by Supabase (30 attempts/hour)
  */
 
-import { useState } from 'react'
-import { Box, Card, CardContent, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material'
+import { useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Box, Typography, Container, Paper } from '@mui/material'
+import { Auth } from '@supabase/auth-ui-react'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { sanitizeNextPath } from '../utils/redirectValidation'
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-    const { signInWithMagicLink, user } = useAuth()
     const navigate = useNavigate()
+    const { user } = useAuth()
+    const [searchParams] = useSearchParams()
 
-    // If already logged in, redirect to dashboard
-    if (user) {
-        navigate('/dashboard')
-        return null
-    }
+    // Get redirect target from URL
+    const next = sanitizeNextPath(searchParams.get('next'))
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!email.trim()) return
-
-        setLoading(true)
-        setMessage(null)
-
-        const { error } = await signInWithMagicLink(email)
-
-        setLoading(false)
-
-        if (error) {
-            setMessage({ type: 'error', text: error.message })
-        } else {
-            setMessage({ type: 'success', text: 'Check your email for the magic link!' })
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user) {
+            navigate(next, { replace: true })
         }
-    }
+    }, [user, next, navigate])
+
+    // Show login UI if not authenticated
+    if (user) return null
 
     return (
         <Box
@@ -51,103 +53,61 @@ export default function LoginPage() {
                 p: 2,
             }}
         >
-            <Card sx={{ maxWidth: 420, width: '100%', borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
-                <CardContent sx={{ p: 4 }}>
-                    {/* Logo / Brand */}
+            <Container maxWidth="sm">
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 4,
+                        borderRadius: 3,
+                        border: 1,
+                        borderColor: 'divider',
+                    }}
+                >
+                    {/* Header */}
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Box
-                            sx={{
-                                width: 64,
-                                height: 64,
-                                borderRadius: '50%',
-                                bgcolor: 'primary.main',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mx: 'auto',
-                                mb: 2,
-                            }}
-                        >
-                            <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'white' }}>
-                                work
-                            </span>
-                        </Box>
-                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                            CareerGold
+                        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
+                            Welcome to CareerGold
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-                            AI-powered job discovery & application
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            Sign in to continue
                         </Typography>
                     </Box>
 
-                    {/* Login Form */}
-                    <form onSubmit={handleSubmit}>
-                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                            Sign in with Magic Link
-                        </Typography>
-
-                        <TextField
-                            fullWidth
-                            type="email"
-                            label="Email address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            disabled={loading}
-                            sx={{ mb: 2 }}
-                        />
-
-                        {message && (
-                            <Alert severity={message.type} sx={{ mb: 2 }}>
-                                {message.text}
-                            </Alert>
-                        )}
-
-                        <Button
-                            fullWidth
-                            type="submit"
-                            variant="contained"
-                            size="large"
-                            disabled={loading || !email.trim()}
-                            sx={{
-                                py: 1.5,
-                                fontWeight: 600,
-                                textTransform: 'none',
-                            }}
-                        >
-                            {loading ? (
-                                <CircularProgress size={24} color="inherit" />
-                            ) : (
-                                'Send Magic Link'
-                            )}
-                        </Button>
-
-                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: 'text.secondary' }}>
-                            We'll email you a magic link for password-free sign in.
-                        </Typography>
-                    </form>
-
-                    {/* Divider */}
-                    <Box sx={{ my: 3, borderTop: 1, borderColor: 'divider' }} />
-
-                    {/* Demo Mode */}
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        size="large"
-                        onClick={() => navigate('/dashboard')}
-                        sx={{
-                            py: 1.5,
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            borderColor: 'divider',
-                            color: 'text.secondary',
+                    {/* Supabase Auth UI */}
+                    <Auth
+                        supabaseClient={supabase}
+                        appearance={{
+                            theme: ThemeSupa,
+                            variables: {
+                                default: {
+                                    colors: {
+                                        brand: '#6750A4',
+                                        brandAccent: '#5840A0',
+                                    },
+                                    radii: {
+                                        borderRadiusButton: '8px',
+                                        buttonBorderRadius: '8px',
+                                        inputBorderRadius: '8px',
+                                    },
+                                },
+                            },
                         }}
-                    >
-                        Continue as Guest (Demo Mode)
-                    </Button>
-                </CardContent>
-            </Card>
+                        theme="light"
+                        providers={[]} // No social login for now
+                        redirectTo={`${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`}
+                        view="sign_in" // Start with sign in view
+                        showLinks={true} // Show "Don't have an account? Sign up"
+                    />
+
+                    {/* Security badge */}
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>lock</span>
+                            Secure login powered by Supabase
+                        </Typography>
+                    </Box>
+                </Paper>
+            </Container>
         </Box>
     )
 }

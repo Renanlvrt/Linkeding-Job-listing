@@ -2,18 +2,30 @@
  * Authentication Context
  * =======================
  * Manages Supabase auth state across the application.
+ * 
+ * Session Storage Strategy:
+ * - Relies on supabase-js client for automatic token management
+ * - Tokens stored in localStorage (XSS risk mitigated by sanitization)
+ * - This context does NOT store tokens directly, only reads from client
+ * - Auto-refresh handled by Supabase client
+ * 
+ * SECURITY WARNING:
+ * - One XSS vulnerability = full token compromise
+ * - Never use dangerouslySetInnerHTML
+ * - Always sanitize user/scraped content
  */
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { buildLoginUrl } from '../utils/redirectValidation'
 
 interface AuthContextType {
     user: User | null
     session: Session | null
     loading: boolean
-    signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
     signOut: () => Promise<void>
+    redirectToLogin: (currentPath: string) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -43,22 +55,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => subscription.unsubscribe()
     }, [])
 
-    const signInWithMagicLink = async (email: string) => {
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: `${window.location.origin}/dashboard`,
-            },
-        })
-        return { error }
-    }
-
+    /**
+     * Sign out user and clear session.
+     * Calls Supabase to invalidate refresh tokens.
+     */
     const signOut = async () => {
         await supabase.auth.signOut()
+        // State will be cleared automatically by onAuthStateChange
+    }
+
+    /**
+     * Redirect to login with `?next=` parameter for post-login redirect.
+     * Used for session expiry and 401 error handling.
+     * 
+     * @param currentPath - Path to return to after login
+     */
+    const redirectToLogin = (currentPath: string) => {
+        const loginUrl = buildLoginUrl(currentPath)
+        window.location.href = loginUrl
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signInWithMagicLink, signOut }}>
+        <AuthContext.Provider value={{ user, session, loading, signOut, redirectToLogin }}>
             {children}
         </AuthContext.Provider>
     )
