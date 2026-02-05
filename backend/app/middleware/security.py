@@ -283,7 +283,13 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
 def sanitize_job_data(job: dict) -> dict:
     """
     Sanitize job data from scraper before storing.
+    Includes mapping job_id to external_id for consistency.
     """
+    # If external_id is missing but job_id is present (Guest API), use job_id
+    external_id = job.get("external_id")
+    if not external_id and job.get("job_id"):
+        external_id = str(job.get("job_id"))
+        
     return {
         "title": sanitize_string(job.get("title", ""), 200),
         "company": sanitize_string(job.get("company", ""), 100),
@@ -293,7 +299,9 @@ def sanitize_job_data(job: dict) -> dict:
         "snippet": sanitize_string(job.get("snippet", ""), 500),
         "applicants": int(job.get("applicants", 0)) if job.get("applicants") else None,
         "source": sanitize_string(job.get("source", ""), 50),
-        "external_id": sanitize_string(job.get("external_id", ""), 100),
+        "external_id": sanitize_string(external_id or "", 100),
+        "match_score": int(job.get("match_score", 0)) if job.get("match_score") is not None else 0,
+        "skills_matched": [sanitize_string(s, 50) for s in job.get("skills_matched", [])] if isinstance(job.get("skills_matched"), list) else [],
     }
 
 

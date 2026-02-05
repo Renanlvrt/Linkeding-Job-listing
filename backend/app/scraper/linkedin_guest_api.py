@@ -77,7 +77,8 @@ class GuestAPIJob:
     posted_time: Optional[str] = None
     applicant_count: Optional[int] = None
     is_easy_apply: bool = False
-    snippet: Optional[str] = None  # Added snippet field
+    snippet: Optional[str] = None
+    description: Optional[str] = None  # Added full description field
 
 
 class LinkedInGuestAPI:
@@ -364,6 +365,44 @@ class LinkedInGuestAPI:
         logger.info(f"Guest API search complete: {len(jobs)} jobs found")
         return jobs, True
     
+    async def get_job_description(self, job_id: str) -> Optional[str]:
+        """
+        Fetch full job description from the Guest API listing endpoint.
+        
+        Args:
+            job_id: LinkedIn job ID
+            
+        Returns:
+            HTML description or None if fetch fails
+        """
+        url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                await self._rate_limit()
+                response = await client.get(url, headers=self._get_headers())
+                
+                if response.status_code != 200:
+                    logger.warning(f"Failed to fetch description for {job_id}: {response.status_code}")
+                    return None
+                
+                html = response.text
+                soup = BeautifulSoup(html, "html.parser")
+                
+                # Primary selector for Guest API listing endpoint
+                desc_elem = soup.select_one("div.show-more-less-html__markup, .description__text, .job-view-main-content")
+                
+                if desc_elem:
+                    # Return HTML but cleaned of scripts/etc if needed
+                    # For now just return the inner HTML which is what the frontend expects
+                    return str(desc_elem.encode_contents().decode('utf-8')).strip()
+                
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error fetching job description for {job_id}: {e}")
+            return None
+    
     def to_job_dict(self, job: GuestAPIJob) -> dict:
         """Convert GuestAPIJob to dictionary format matching existing code."""
         return {
@@ -378,7 +417,7 @@ class LinkedInGuestAPI:
             "applicants": job.applicant_count,
             "applicant_count": job.applicant_count,
             "snippet": job.snippet,
-            "description": job.snippet, # Fallback
+            "description": job.description or job.snippet, # Prefer full description
             "source": "linkedin_guest_api",
         }
 

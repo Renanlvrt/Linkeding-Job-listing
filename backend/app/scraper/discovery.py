@@ -34,7 +34,7 @@ from app.scraper.filters import (
     build_ddg_exclude_query,
 )
 from app.scraper.anti_detect import sync_random_delay
-from app.scraper.linkedin_guest_api import search_jobs_via_guest_api
+from app.scraper.linkedin_guest_api import search_jobs_via_guest_api, get_guest_api
 from app.scraper.validator import validate_jobs
 
 # Set up logging
@@ -140,15 +140,32 @@ class JobDiscovery:
             if guest_success and len(guest_jobs) > 0:
                 # Apply applicant filter to Guest API results
                 filtered_jobs = []
+                # Simple keyword scoring for discovery (Dashboard sorts by match_score)
+                keywords_list = [k.lower().strip() for k in keywords.split()]
+                
                 for job in guest_jobs:
                     # Apply max_applicants filter if we have that data
                     if job.get("applicant_count") and job["applicant_count"] > max_applicants:
                         continue
+                        
+                    # Calculate simple heuristic score
+                    title_lower = job.get("title", "").lower()
+                    score = 0
+                    for k in keywords_list:
+                        if k in title_lower:
+                            score += 25
+                    job["match_score"] = min(score, 100)
+                    
                     filtered_jobs.append(job)
                 
                 logger.info(f"✓ Guest API success: {len(filtered_jobs)} jobs found")
+                
+                # Enrich with full descriptions (Deep Fetch)
+                logger.info(f"🧬 Fetching full descriptions for {len(filtered_jobs)} jobs...")
+                enriched_jobs = await self._enrich_jobs_with_descriptions(filtered_jobs[:max_results])
+                
                 return {
-                    "jobs": filtered_jobs[:max_results],
+                    "jobs": enriched_jobs,
                     "search_method": "linkedin_guest_api",
                     "fallback_used": False,
                 }
@@ -178,6 +195,16 @@ class JobDiscovery:
         if ddg_jobs:
             logger.info(f"Validating {len(ddg_jobs)} fallback jobs...")
             ddg_jobs = await validate_jobs(ddg_jobs, max_concurrent=5)
+            
+            # Simple keyword scoring for DDG jobs
+            keywords_list = [k.lower().strip() for k in keywords.split()]
+            for job in ddg_jobs:
+                title_lower = job.get("title", "").lower()
+                score = 0
+                for k in keywords_list:
+                    if k in title_lower:
+                        score += 25
+                job["match_score"] = min(score, 100)
         
         return {
             "jobs": ddg_jobs,
@@ -185,6 +212,36 @@ class JobDiscovery:
             "fallback_used": True,
             "fallback_reason": "LinkedIn Guest API unavailable. Filters (experience, job type) are hints only with DuckDuckGo.",
         }
+    
+    async def _enrich_jobs_with_descriptions(self, jobs: list[dict], max_concurrent: int = 3) -> list[dict]:
+        """
+        Fetch full descriptions for a list of jobs concurrently.
+        """
+        if not jobs:
+            return []
+            
+        api = get_guest_api()
+        sem = asyncio.Semaphore(max_concurrent)
+        
+        async def _enrich_single(job):
+            async with sem:
+                job_id = job.get("job_id")
+                if not job_id:
+                    # Try to extract from URL if guest_api didn't provide it
+                    url = job.get("url") or job.get("link")
+                    if url:
+                        match = re.search(r"/jobs/view/(\d+)", url)
+                        if match:
+                            job_id = match.group(1)
+                
+                if job_id:
+                    description = await api.get_job_description(job_id)
+                    if description:
+                        job["description"] = description
+                return job
+
+        tasks = [_enrich_single(job) for job in jobs]
+        return await asyncio.gather(*tasks)
     
     def _search_via_duckduckgo(
         self,
