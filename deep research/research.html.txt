@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareerGold Auto: Technical Architecture Infographic</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Theme & Palette: Vibrant Blue & Gold -->
+    <!-- Palette Name: "Executive Gold" -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',    /* Slate 900 */
+                            primary: '#1e40af', /* Blue 800 */
+                            vibrant: '#3b82f6', /* Blue 500 */
+                            gold: '#fbbf24',    /* Amber 400 */
+                            accent: '#f59e0b',  /* Amber 500 */
+                            light: '#f8fafc',   /* Slate 50 */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Chart Container Styling Constraints */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Constraint for large screens */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base mobile height */
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px; /* Tablet/Desktop height */
+            }
+        }
+
+        /* Custom Utilities for Diagrams */
+        .arrow-down::after {
+            content: '↓';
+            display: block;
+            text-align: center;
+            font-size: 2rem;
+            color: #fbbf24;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .arrow-right::after {
+            content: '→';
+            display: inline-block;
+            margin-left: 0.5rem;
+            color: #fbbf24;
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .arrow-right::after {
+                content: '↓';
+                display: block;
+                margin-left: 0;
+                margin-top: 0.5rem;
+                text-align: center;
+            }
+        }
+    </style>
+    <!-- 
+        NO SVG USED. 
+        NO MERMAID JS USED. 
+        Palette: Vibrant Blue & Gold.
+    -->
+</head>
+<body class="bg-brand-light text-slate-800 font-sans antialiased">
+
+    <!-- HERO SECTION -->
+    <header class="bg-brand-dark text-white pt-12 pb-16 px-6">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
+                CareerGold <span class="text-brand-gold">Auto</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto font-light">
+                Autonomous Job Application Architecture using the <span class="text-brand-vibrant font-semibold">Antigravity Framework</span>.
+            </p>
+            <div class="mt-8 flex justify-center gap-4">
+                <span class="px-4 py-2 bg-brand-primary rounded-full text-sm font-semibold border border-brand-vibrant shadow-lg">Visual Browser Agents</span>
+                <span class="px-4 py-2 bg-brand-primary rounded-full text-sm font-semibold border border-brand-vibrant shadow-lg">Local Intelligence</span>
+                <span class="px-4 py-2 bg-brand-primary rounded-full text-sm font-semibold border border-brand-vibrant shadow-lg">Human-in-the-Loop</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTION 1: ANTIGRAVITY ARCHITECTURE (Diagram) -->
+    <section class="max-w-6xl mx-auto px-6 -mt-10 relative z-10">
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div class="p-8 border-b border-slate-100">
+                <h2 class="text-2xl md:text-3xl font-bold text-brand-dark mb-4">The Antigravity Architecture</h2>
+                <p class="text-slate-600 mb-8">
+                    The system strictly follows a 3-Layer Architecture to separate high-level reasoning from deterministic execution. This ensures reliability when handling fragile web interactions.
+                </p>
+
+                <!-- HTML/CSS Diagram -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    
+                    <!-- Layer 1 -->
+                    <div class="p-6 bg-slate-50 border-t-4 border-brand-vibrant rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        <div class="text-3xl mb-2">📄</div>
+                        <h3 class="text-xl font-bold text-brand-primary mb-2">Layer 1: Directives</h3>
+                        <p class="text-sm font-semibold text-brand-dark mb-2">Standard Operating Procedures (SOPs)</p>
+                        <p class="text-sm text-slate-500">
+                            Static Markdown files defining the "What".<br>
+                            <em>e.g., directives/sourcing_sop.md</em>
+                        </p>
+                    </div>
+
+                    <!-- Layer 2 -->
+                    <div class="p-6 bg-brand-dark text-white border-t-4 border-brand-gold rounded-lg shadow-lg transform md:-translate-y-4">
+                        <div class="text-3xl mb-2">🧠</div>
+                        <h3 class="text-xl font-bold text-brand-gold mb-2">Layer 2: Orchestration</h3>
+                        <p class="text-sm font-semibold text-white mb-2">The Gemini "Brain"</p>
+                        <p class="text-sm text-slate-300">
+                            The intelligent router. Reads SOPs, handles errors, and decides which tool to use next.
+                        </p>
+                    </div>
+
+                    <!-- Layer 3 -->
+                    <div class="p-6 bg-slate-50 border-t-4 border-brand-vibrant rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        <div class="text-3xl mb-2">🤖</div>
+                        <h3 class="text-xl font-bold text-brand-primary mb-2">Layer 3: Execution</h3>
+                        <p class="text-sm font-semibold text-brand-dark mb-2">Deterministic Scripts</p>
+                        <p class="text-sm text-slate-500">
+                            Python scripts for browser control and calculation.<br>
+                            <em>e.g., execution/visual_agent.py</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: THE AUTO-APPLY LOOP (Flow) -->
+    <section class="max-w-6xl mx-auto px-6 py-16">
+        <h2 class="text-3xl font-bold text-brand-dark mb-6 text-center">The "Auto-Apply" Loop</h2>
+        <p class="text-slate-600 max-w-3xl mx-auto text-center mb-12">
+            A cyclic workflow designed to source high-quality leads, filter them securely on-device, and automate applications with human oversight.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center relative">
+            
+            <!-- Step 1 -->
+            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-md h-full flex flex-col relative">
+                <span class="absolute top-0 right-0 bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded-bl-lg">01</span>
+                <h3 class="font-bold text-lg text-brand-dark mb-2">Hunter Agent</h3>
+                <p class="text-sm text-slate-600 mb-2"><strong>Visual Browser Agent</strong></p>
+                <p class="text-xs text-slate-500">Uses "human-like" browsing (Playwright) to source jobs without triggering anti-bot bans.</p>
+            </div>
+            
+            <!-- Connector -->
+            <div class="hidden md:flex justify-center text-brand-gold text-2xl font-bold">→</div>
+            <div class="md:hidden text-center text-brand-gold text-2xl font-bold">↓</div>
+
+            <!-- Step 2 -->
+            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-md h-full flex flex-col relative">
+                <span class="absolute top-0 right-0 bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded-bl-lg">02</span>
+                <h3 class="font-bold text-lg text-brand-dark mb-2">Recruiter Agent</h3>
+                <p class="text-sm text-slate-600 mb-2"><strong>Local Filtering</strong></p>
+                <p class="text-xs text-slate-500">Uses <code>sentence-transformers</code> to semantically rank jobs (0-100%) locally.</p>
+            </div>
+
+            <!-- Connector -->
+            <div class="hidden md:flex justify-center text-brand-gold text-2xl font-bold">→</div>
+            <div class="md:hidden text-center text-brand-gold text-2xl font-bold">↓</div>
+
+            <!-- Step 3 -->
+            <div class="bg-brand-dark text-white p-6 rounded-lg shadow-xl h-full flex flex-col relative transform scale-105 border-2 border-brand-gold">
+                <span class="absolute top-0 right-0 bg-brand-gold text-brand-dark text-xs font-bold px-2 py-1 rounded-bl-lg">03</span>
+                <h3 class="font-bold text-lg text-brand-gold mb-2">Human Review</h3>
+                <p class="text-sm text-slate-300 mb-2"><strong>The Quality Gate</strong></p>
+                <p class="text-xs text-slate-400">User approves high-match jobs in a "Tinder-like" queue. Prevents spamming.</p>
+            </div>
+
+            <!-- Connector -->
+            <div class="hidden md:flex justify-center text-brand-gold text-2xl font-bold">→</div>
+            <div class="md:hidden text-center text-brand-gold text-2xl font-bold">↓</div>
+
+            <!-- Step 4 -->
+            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-md h-full flex flex-col relative">
+                <span class="absolute top-0 right-0 bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded-bl-lg">04</span>
+                <h3 class="font-bold text-lg text-brand-dark mb-2">Submitter Agent</h3>
+                <p class="text-sm text-slate-600 mb-2"><strong>Visual Anchoring</strong></p>
+                <p class="text-xs text-slate-500">Fills forms (Workday/Lever) by "seeing" fields. Pauses on CAPTCHAs.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- SECTION 3: INTELLIGENT FILTERING DATA (Charts) -->
+    <section class="bg-white py-16 border-t border-slate-100">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-brand-dark mb-2">Intelligence & Efficiency</h2>
+            <p class="text-slate-600 mb-12">
+                Data demonstrating how the system reduces noise and ensures only high-relevance applications are submitted.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                
+                <!-- CHART 1: The Funnel -->
+                <div class="flex flex-col">
+                    <h3 class="text-xl font-bold text-brand-primary mb-4">The Selection Funnel</h3>
+                    <p class="text-sm text-slate-500 mb-6">
+                        The drop-off from raw scraped jobs to final submission. The system aggressively filters noise to protect domain reputation.
+                    </p>
+                    <div class="chart-container bg-slate-50 rounded-lg p-4 border border-slate-200 shadow-inner">
+                        <canvas id="funnelChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-xs text-slate-400 text-center">
+                        Goal: Organize (Composition of Pipeline)
+                    </div>
+                </div>
+
+                <!-- CHART 2: Semantic Scoring -->
+                <div class="flex flex-col">
+                    <h3 class="text-xl font-bold text-brand-primary mb-4">Semantic Match Scoring</h3>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Jobs are scored using local vector embeddings. Only jobs above the <span class="text-brand-gold font-bold">70% threshold</span> reach the user.
+                    </p>
+                    <div class="chart-container bg-slate-50 rounded-lg p-4 border border-slate-200 shadow-inner">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-xs text-slate-400 text-center">
+                        Goal: Relationships (Score Distribution)
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: RISK MANAGEMENT -->
+    <section class="max-w-6xl mx-auto px-6 py-16">
+        <h2 class="text-3xl font-bold text-brand-dark mb-8">Risk Management Protocols</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Risk Card 1: Velocity -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-brand-gold">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-brand-dark">Velocity Throttle</h3>
+                    <span class="text-2xl">🚦</span>
+                </div>
+                <div class="chart-container" style="height: 200px; max-height: 200px;">
+                    <canvas id="velocityChart"></canvas>
+                </div>
+                <p class="text-sm text-slate-600 mt-4 text-center">
+                    Capped at <strong>50/day</strong> to mimic human behavior.
+                </p>
+            </div>
+
+            <!-- Risk Card 2: Visual Anchoring -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-brand-vibrant">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-brand-dark">Visual Anchoring</h3>
+                    <span class="text-2xl">👁️</span>
+                </div>
+                <p class="text-slate-600 mb-4 text-sm">
+                    Traditional scrapers rely on code selectors (<code>#id_123</code>) which change often to break bots. 
+                </p>
+                <div class="bg-slate-100 p-3 rounded-md text-xs font-mono text-slate-700 mb-2">
+                    ❌ Selector: input[id="u_0_2"]<br>
+                    ✅ Visual: Input near label "First Name"
+                </div>
+                <p class="text-sm text-slate-500">
+                    Our agent "looks" at the screen, making it immune to code obfuscation.
+                </p>
+            </div>
+
+            <!-- Risk Card 3: The Kill Switch -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-brand-dark">The "Stuck" Protocol</h3>
+                    <span class="text-2xl">🛑</span>
+                </div>
+                <p class="text-slate-600 mb-4 text-sm">
+                    If the agent encounters a "Verify you are human" modal or CAPTCHA:
+                </p>
+                <ul class="space-y-2 text-sm text-slate-700">
+                    <li class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Immediate Execution Freeze
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Alert: <code>execution/alert_user.py</code>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Wait for Human Intervention
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-brand-dark text-slate-400 py-12 text-center">
+        <p class="mb-2">Generated for <strong>CareerGold Auto</strong> Internal Review</p>
+        <p class="text-sm">Strictly No SVG • No Mermaid • Pure Canvas & HTML</p>
+    </footer>
+
+    <!-- SCRIPT FOR CHARTS -->
+    <script>
+        // --- UTILITY: Label Wrapping ---
+        const wrapLabel = (label) => {
+            if (label.length > 16) {
+                return label.split(' '); // Simple word split for wrapping
+            }
+            return label;
+        };
+
+        // --- GLOBAL CHART DEFAULTS ---
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#475569';
+        
+        // --- COMMON TOOLTIP CONFIG (MANDATORY) ---
+        const commonTooltip = {
+            callbacks: {
+                title: function(tooltipItems) {
+                    const item = tooltipItems[0];
+                    let label = item.chart.data.labels[item.dataIndex];
+                    if (Array.isArray(label)) {
+                        return label.join(' ');
+                    } else {
+                        return label;
+                    }
+                }
+            }
+        };
+
+        // --- CHART 1: THE FUNNEL (Bar) ---
+        const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
+        new Chart(ctxFunnel, {
+            type: 'bar',
+            data: {
+                labels: ['Total Scraped', 'Semantic Filter Pass', 'User Approved', 'Applications Sent'].map(wrapLabel),
+                datasets: [{
+                    label: 'Candidates',
+                    data: [120, 45, 18, 15],
+                    backgroundColor: [
+                        '#94a3b8', // Slate 400
+                        '#3b82f6', // Brand Blue
+                        '#fbbf24', // Brand Gold
+                        '#1e40af'  // Dark Blue
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: commonTooltip
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // --- CHART 2: SEMANTIC SCORING (Scatter) ---
+        const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+        
+        // Generate mock data for scatter plot
+        const scatterData = [];
+        for(let i=0; i<30; i++) {
+            scatterData.push({x: i, y: Math.floor(Math.random() * 60) + 30}); // Low match noise
+        }
+        for(let i=30; i<40; i++) {
+            scatterData.push({x: i, y: Math.floor(Math.random() * 25) + 75}); // High match hits
+        }
+
+        new Chart(ctxScatter, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Job Relevance Score',
+                    data: scatterData,
+                    backgroundColor: (ctx) => {
+                        const v = ctx.raw?.y;
+                        return v >= 70 ? '#fbbf24' : '#94a3b8'; // Gold for high match, Grey for low
+                    },
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Match Score: ${context.parsed.y}%`;
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                yMin: 70,
+                                yMax: 70,
+                                borderColor: '#1e40af',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'Threshold',
+                                    enabled: true
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        min: 0, 
+                        max: 100, 
+                        title: { display: true, text: 'Semantic Match %' } 
+                    },
+                    x: { display: false } // Hide Job ID axis
+                }
+            }
+        });
+
+        // --- CHART 3: VELOCITY (Doughnut) ---
+        const ctxVelocity = document.getElementById('velocityChart').getContext('2d');
+        new Chart(ctxVelocity, {
+            type: 'doughnut',
+            data: {
+                labels: ['Daily Limit Used', 'Remaining Capacity'],
+                datasets: [{
+                    data: [35, 15], // 35 used out of 50
+                    backgroundColor: ['#1e40af', '#e2e8f0'],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: commonTooltip
+                }
+            },
+            plugins: [{
+                id: 'textCenter',
+                beforeDraw: function(chart) {
+                    var width = chart.width,
+                        height = chart.height,
+                        ctx = chart.ctx;
+            
+                    ctx.restore();
+                    var fontSize = (height / 114).toFixed(2);
+                    ctx.font = "bold " + fontSize + "em sans-serif";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#1e40af";
+            
+                    var text = "35/50",
+                        textX = Math.round((width - ctx.measureText(text).width) / 2),
+                        textY = height / 2;
+            
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        });
+
+    </script>
+</body>
+</html>
+<!-- 
+    Data Points Summary:
+    1. Funnel efficiency: High drop-off from scrape to submit ensures quality.
+    2. Semantic Scoring: Highlights the 70% cutoff threshold.
+    3. Velocity: Visualizes the safety cap to prevent bans.
+    
+    Visualization Justification:
+    - Bar Chart: Clear volume comparison for the funnel stages.
+    - Scatter Plot: Effectively shows the distribution of "bad" vs "good" matches.
+    - Doughnut: Standard for "progress towards a limit" (velocity).
+    
+    Confirmation: NO SVG or Mermaid JS used. All visuals are HTML/CSS or Canvas.
+-->

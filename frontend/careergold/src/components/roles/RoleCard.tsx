@@ -4,7 +4,6 @@ import {
     Box,
     Typography,
     Chip,
-    IconButton,
 } from '@mui/material'
 import { Job } from '../../mocks/data'
 import { SafeText } from '../../lib/security'
@@ -108,10 +107,33 @@ export default function RoleCard({ job, onClick }: RoleCardProps) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>group</span>
                         <Typography variant="caption" sx={{ fontSize: '0.75rem', textTransform: 'none', letterSpacing: 0 }}>
-                            {job.applicants} Applicants
+                            {job.applicants_count || job.applicants} Applicants
                         </Typography>
                     </Box>
                 </Box>
+
+                {/* Description Preview */}
+                {job.description && (
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                            mt: 2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            fontSize: '0.8rem',
+                            lineHeight: 1.5,
+                        }}
+                    >
+                        <SafeText>
+                            {job.description.length > 150
+                                ? job.description.substring(0, 150) + '...'
+                                : job.description}
+                        </SafeText>
+                    </Typography>
+                )}
 
                 {/* Footer: Posted Time + Action */}
                 <Box

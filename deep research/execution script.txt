@@ -1,0 +1,67 @@
+import os
+import sys
+import asyncio
+import json
+from langchain_openai import ChatOpenAI
+# Note: In a real environment, you would import browser_use or similar
+# from browser_use import Agent
+
+"""
+LAYER 3: VISUAL AGENT WRAPPER
+This script wraps a Large Action Model (LAM) to control a headless browser.
+It accepts a natural language 'task' and returns the result/history.
+
+Usage: python3 visual_agent_wrapper.py "task_string" "url_optional"
+"""
+
+async def run_browser_task(task: str, start_url: str = None):
+    # 1. Configuration
+    # We use a vision-capable model (like GPT-4o or Gemini 1.5 Pro) to 'see' the browser
+    llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+    
+    # 2. Define the Agent (Pseudocode for browser-use implementation)
+    # agent = Agent(
+    #     task=task,
+    #     llm=llm,
+    #     start_url=start_url,
+    #     headless=False,  # Set to True for production, False for debugging
+    #     save_conversation_path=".tmp/agent_history.json"
+    # )
+    
+    print(f"👁️ AGENT STARTING: {task}")
+    
+    # 3. Execution Mock (Since we cannot run the actual browser here)
+    # result = await agent.run()
+    
+    # Simulating a successful run for architecture demonstration
+    result = {
+        "status": "success",
+        "output": "Navigated to site. Found 15 jobs. Extracted data to memory.",
+        "screenshot_path": ".tmp/screenshot_latest.png"
+    }
+    
+    # 4. Handle Output
+    # In Antigravity, we often save state to .tmp/run_state.json for the Orchestrator
+    with open(".tmp/last_browser_action.json", "w") as f:
+        json.dump(result, f, indent=2)
+
+    return result
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python visual_agent_wrapper.py <task_description> [url]")
+        sys.exit(1)
+        
+    task_input = sys.argv[1]
+    url_input = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    try:
+        # async call
+        asyncio.run(run_browser_task(task_input, url_input))
+        print("✅ Browser task completed.")
+    except Exception as e:
+        print(f"❌ Browser task failed: {str(e)}")
+        # Critical: Write error to state so Orchestrator knows to stop
+        with open(".tmp/last_browser_action.json", "w") as f:
+            json.dump({"status": "error", "error": str(e)}, f)
+        sys.exit(1)

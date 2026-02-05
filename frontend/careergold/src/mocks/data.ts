@@ -8,13 +8,22 @@ export interface Job {
     location: string;
     matchScore: number;
     applicants: number;
+    applicants_count?: number; // Added for explicit scraped count
     postedAgo: string;
+    posted_date?: string;      // Added for raw scraped date string
     salary?: string;
+    salary_range?: string;     // Alias for salary
+    job_type?: string;         // Added for scraped job type
     status: 'NEW' | 'SAVED' | 'APPLIED' | 'REJECTED';
     description?: string;
+    snippet?: string;  // Added for scraped jobs
+    link?: string;     // Added for external link
+    apply_link?: string; // Added for explicit apply link
+    url?: string;      // Alias for link
     responsibilities?: string[];
     requirements?: string[];
     skills?: { name: string; matched: boolean }[];
+    raw_data?: any;    // Added for debugging/full scraped data
     companyInfo?: {
         size: string;
         industry: string;

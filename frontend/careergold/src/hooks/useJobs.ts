@@ -94,23 +94,32 @@ export function useSaveScrapedJobs() {
     return useMutation({
         mutationFn: async (jobs: Partial<Job>[]) => {
             // Map scraped jobs to database format
-            const dbJobs = jobs.map(job => ({
-                external_id: job.external_id || null,
+            // Map scraped jobs to database format
+            const dbJobs = jobs.map((job: any) => ({
+                external_id: job.external_id || job.job_id || null,
                 title: job.title,
                 company: job.company,
                 location: job.location || null,
                 link: job.link || null,
-                applicants: job.applicants || null,
+                apply_link: job.link || job.url || null, // User requested specific field
+                applicants: job.applicants || job.applicant_count || null, // Standard field
+                applicants_count: job.applicants || job.applicant_count || null, // User requested specific field
+                description: job.description || job.snippet || null, // Fallback to snippet if full description missing
+                snippet: job.snippet || null,
                 source: job.source || 'linkedin',
                 match_score: job.match_score || 0,
                 status: 'NEW' as const,
+                salary_range: job.salary || null,
+                job_type: job.job_type || null,
+                posted_date: job.posted_ago || job.posted_time || null,
+                raw_data: job, // Store full original object
             }))
 
             const { data, error } = await supabase
                 .from('jobs')
                 .upsert(dbJobs, {
                     onConflict: 'external_id',
-                    ignoreDuplicates: true,
+                    ignoreDuplicates: false, // Update if exists to capture new details
                 })
                 .select()
 

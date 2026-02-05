@@ -30,12 +30,15 @@ export default function DashboardPage() {
         company: j.company,
         location: j.location || 'Remote',
         matchScore: j.match_score,
-        applicants: j.applicants || 0,
-        postedAgo: j.scraped_at ? getTimeAgo(j.scraped_at) : 'Recently',
+        applicants: j.applicants !== null ? j.applicants : (j.applicants_count || 0),
+        postedAgo: j.posted_date || (j.scraped_at ? getTimeAgo(j.scraped_at) : 'Recently'),
         status: j.status as Job['status'],
-        salaryRange: undefined,
-        description: j.description || undefined,
-        skills: j.skills_matched || [],
+        salaryRange: j.salary_range || undefined,
+        description: j.description || j.snippet || undefined,
+        link: j.apply_link || j.link, // Pass link for "Apply Now"
+        skills: Array.isArray(j.skills_matched)
+            ? j.skills_matched.map((s: string) => ({ name: s, matched: true }))
+            : [],
     }))
 
     return (

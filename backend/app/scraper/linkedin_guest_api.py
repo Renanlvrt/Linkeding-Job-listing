@@ -77,6 +77,7 @@ class GuestAPIJob:
     posted_time: Optional[str] = None
     applicant_count: Optional[int] = None
     is_easy_apply: bool = False
+    snippet: Optional[str] = None  # Added snippet field
 
 
 class LinkedInGuestAPI:
@@ -220,6 +221,19 @@ class LinkedInGuestAPI:
             # Check for Easy Apply
             easy_apply_elem = card_element.select_one(".job-search-card__easy-apply-label")
             is_easy_apply = easy_apply_elem is not None
+
+            # Extract applicants (if available) - usually not on search card, but we check
+            applicants = None
+            applicant_elem = card_element.select_one(".job-search-card__num-applicants")
+            if applicant_elem:
+                text = applicant_elem.get_text(strip=True)
+                match = re.search(r'(\d+)', text)
+                if match:
+                    applicants = int(match.group(1))
+
+            # Extract snippet/benefits (often hidden or limited)
+            snippet_elem = card_element.select_one(".job-search-card__snippet, .job-search-card__benefits")
+            snippet = snippet_elem.get_text(strip=True) if snippet_elem else f"{title} at {company}"
             
             # Build job URL
             url = f"https://www.linkedin.com/jobs/view/{job_id}"
@@ -231,7 +245,9 @@ class LinkedInGuestAPI:
                 location=location,
                 url=url,
                 posted_time=posted_time,
+                applicant_count=applicants,
                 is_easy_apply=is_easy_apply,
+                snippet=snippet
             )
         except Exception as e:
             logger.warning(f"Failed to parse job card: {e}")
@@ -359,6 +375,10 @@ class LinkedInGuestAPI:
             "link": job.url,  # Frontend expects 'link'
             "posted_time": job.posted_time,
             "is_easy_apply": job.is_easy_apply,
+            "applicants": job.applicant_count,
+            "applicant_count": job.applicant_count,
+            "snippet": job.snippet,
+            "description": job.snippet, # Fallback
             "source": "linkedin_guest_api",
         }
 

@@ -113,7 +113,7 @@ export default function JobDetailsSideSheet({ job, open, onClose }: JobDetailsSi
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" sx={{ mb: 1.5 }}>Job Description</Typography>
                     <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
-                        {job.description || 'We are seeking an experienced developer to join our core product team. You will be responsible for building high-quality, scalable applications.'}
+                        {job.description || job.snippet || 'No description available for this role.'}
                     </Typography>
                 </Box>
 
@@ -121,16 +121,16 @@ export default function JobDetailsSideSheet({ job, open, onClose }: JobDetailsSi
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" sx={{ mb: 1.5 }}>Key Responsibilities</Typography>
                     <Box component="ul" sx={{ pl: 2.5, color: 'text.secondary' }}>
-                        {(job.responsibilities || [
-                            'Develop and maintain responsive web applications using React and TypeScript.',
-                            'Collaborate with UI/UX designers to implement design systems.',
-                            'Optimize application performance and ensure cross-browser compatibility.',
-                            'Participate in code reviews and mentor junior developers.',
-                        ]).map((resp, idx) => (
+                        {(job.responsibilities || []).map((resp, idx) => (
                             <Typography component="li" key={idx} variant="body2" sx={{ mb: 1 }}>
                                 {resp}
                             </Typography>
                         ))}
+                        {(!job.responsibilities || job.responsibilities.length === 0) && (
+                            <Typography variant="body2">
+                                Please refer to the full job application for detailed responsibilities.
+                            </Typography>
+                        )}
                     </Box>
                 </Box>
 
@@ -245,6 +245,8 @@ export default function JobDetailsSideSheet({ job, open, onClose }: JobDetailsSi
                 </Button>
                 <Button
                     variant="contained"
+                    href={job.link || job.url}
+                    target="_blank"
                     sx={{
                         flex: 2,
                         height: 48,
@@ -254,6 +256,6 @@ export default function JobDetailsSideSheet({ job, open, onClose }: JobDetailsSi
                     Apply Now
                 </Button>
             </Box>
-        </Drawer>
+        </Drawer >
     )
 }

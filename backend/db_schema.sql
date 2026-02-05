@@ -39,7 +39,7 @@ CREATE POLICY "Users can insert own profile" ON users
 -- ============================================================
 CREATE TABLE IF NOT EXISTS jobs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    external_id TEXT,            -- LinkedIn job ID or source-specific ID
+    external_id TEXT UNIQUE,     -- LinkedIn job ID or source-specific ID
     title TEXT NOT NULL,
     company TEXT NOT NULL,
     location TEXT,
@@ -72,6 +72,13 @@ CREATE POLICY "Authenticated users can view jobs" ON jobs
 -- Only service role can insert/update jobs (backend scraper)
 CREATE POLICY "Service role can manage jobs" ON jobs
     FOR ALL USING (auth.role() = 'service_role');
+
+-- Allow users to save jobs (for the Lead Scraper)
+CREATE POLICY "Authenticated users can insert jobs" ON jobs
+    FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update jobs" ON jobs
+    FOR UPDATE TO authenticated USING (true);
 
 -- ============================================================
 -- APPLICATIONS TABLE

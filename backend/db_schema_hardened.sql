@@ -4,33 +4,54 @@
 -- Run this in the Supabase SQL Editor AFTER the initial db_schema.sql
 
 -- ============================================================
--- STEP 1: DROP EXISTING WEAK POLICIES
+-- STEP 1: DROP EXISTING POLICIES (WEAK & HARDENED)
 -- ============================================================
--- First, drop all existing policies to replace with hardened versions
+-- Drop all potential colliding policies to ensure script is idempotent
 
 -- Users table
 DROP POLICY IF EXISTS "Users can view own profile" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+DROP POLICY IF EXISTS "Users can view own profile (verified)" ON users;
+DROP POLICY IF EXISTS "Users can update own profile (verified)" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile (verified)" ON users;
 
 -- Jobs table
 DROP POLICY IF EXISTS "Authenticated users can view jobs" ON jobs;
 DROP POLICY IF EXISTS "Service role can manage jobs" ON jobs;
+DROP POLICY IF EXISTS "Authenticated users can insert jobs" ON jobs;
+DROP POLICY IF EXISTS "Authenticated users can update jobs" ON jobs;
+DROP POLICY IF EXISTS "Verified users can read jobs" ON jobs;
+DROP POLICY IF EXISTS "Service role manages jobs" ON jobs;
+DROP POLICY IF EXISTS "Verified users can insert jobs" ON jobs;
+DROP POLICY IF EXISTS "Verified users can update jobs" ON jobs;
 
 -- Applications table
 DROP POLICY IF EXISTS "Users can view own applications" ON applications;
 DROP POLICY IF EXISTS "Users can create own applications" ON applications;
 DROP POLICY IF EXISTS "Users can update own applications" ON applications;
+DROP POLICY IF EXISTS "Users view own applications (verified)" ON applications;
+DROP POLICY IF EXISTS "Users create own applications (verified)" ON applications;
+DROP POLICY IF EXISTS "Users update own applications (verified)" ON applications;
+DROP POLICY IF EXISTS "Users delete own applications (verified)" ON applications;
 
 -- Saved jobs
 DROP POLICY IF EXISTS "Users can manage saved jobs" ON saved_jobs;
+DROP POLICY IF EXISTS "Users manage own saved jobs (verified)" ON saved_jobs;
 
 -- CV versions
 DROP POLICY IF EXISTS "Users can manage own CVs" ON cv_versions;
+DROP POLICY IF EXISTS "Users manage own CVs (verified)" ON cv_versions;
 
 -- Scrape runs
 DROP POLICY IF EXISTS "Service role can manage scrape_runs" ON scrape_runs;
 DROP POLICY IF EXISTS "Authenticated users can view scrape_runs" ON scrape_runs;
+DROP POLICY IF EXISTS "Service role manages scrape_runs" ON scrape_runs;
+
+-- Security Events & Audit Log (Hardened only)
+DROP POLICY IF EXISTS "Users view own security events" ON security_events;
+DROP POLICY IF EXISTS "Service role manages security events" ON security_events;
+DROP POLICY IF EXISTS "Service role only for audit" ON audit_log;
 
 -- ============================================================
 -- STEP 2: HELPER FUNCTION FOR EMAIL VERIFICATION CHECK
@@ -95,6 +116,20 @@ CREATE POLICY "Service role manages jobs" ON jobs
     TO service_role
     USING (true)
     WITH CHECK (true);
+
+-- Allow verified users to save/update jobs (for the Lead Scraper)
+CREATE POLICY "Verified users can insert jobs" ON jobs
+    FOR INSERT 
+    WITH CHECK (public.is_verified_user());
+
+CREATE POLICY "Verified users can update jobs" ON jobs
+    FOR UPDATE 
+    USING (public.is_verified_user())
+    WITH CHECK (public.is_verified_user());
+
+-- Add UNIQUE constraint (Drop first to avoid error if exists)
+ALTER TABLE jobs DROP CONSTRAINT IF EXISTS unique_external_id;
+ALTER TABLE jobs ADD CONSTRAINT unique_external_id UNIQUE (external_id);
 
 -- ============================================================
 -- STEP 5: HARDENED APPLICATION POLICIES
