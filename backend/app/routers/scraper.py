@@ -228,7 +228,7 @@ async def quick_search(
     log_request(req, user_id)
     
     # Discovery returns dict with jobs, search_method, fallback info
-    result = job_discovery.search_linkedin_jobs(
+    result = await job_discovery.search_linkedin_jobs(
         keywords=request.keywords,
         location=request.location,
         max_results=request.max_results,

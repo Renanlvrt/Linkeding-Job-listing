@@ -1,0 +1,119 @@
+The safest pattern with Supabase is: let Supabase Auth own all credentials, enforce strict Row‑Level Security in Postgres, and only talk to the database through either the official client (from the browser) or a trusted backend that never exposes secrets.
+
+Below is a practical “better and safer” architecture you can move toward.
+
+1. Auth model: don’t roll your own
+Use Supabase Auth (email/password, magic links, OAuth) instead of storing passwords yourself anywhere in your app DB.
+
+Supabase stores passwords with modern password hashing (bcrypt/argon variants) and supports configurable password strength and leak checks in the dashboard.
+
+In your frontend, only ever call supabase.auth.signInWithPassword / signUp / signInWithOtp etc.; never send raw passwords to your own API first.
+
+Example pattern (React/AuthContext):
+
+Initialize createClient in a single module with the anon key only.
+
+Wrap your app in an AuthProvider that:
+
+Listens to onAuthStateChange.
+
+Exposes signInWithPassword, signInWithOtp, signOut.
+
+Stores just the user object and session in React state; you do not persist passwords or hash them yourself.
+
+2. Token and session handling
+Let the Supabase JS client manage JWTs and refresh tokens; do not manually stash them in localStorage.
+​
+
+Prefer supabase-js default storage (which uses localStorage) but combine it with strict XSS hardening (your SafeText work is important) so tokens cannot be stolen.
+​
+
+If you want to be stricter, you can:
+
+Use a backend that exchanges the Supabase session for an httpOnly, secure cookie for your own API, and never read the JWT directly in JS.
+
+Keep the Supabase Service Role key and any custom JWT signing logic strictly on that backend.
+
+3. Database security: RLS first, everything else second
+Enable Row‑Level Security on every table with user data (profiles, leads, jobs, etc.).
+
+Write simple, explicit policies keyed off auth.uid() or JWT claims, so a user can only see/update their own rows.
+
+Example:
+
+sql
+alter table leads enable row level security;
+
+create policy "Users can see own leads"
+on leads for select
+using (auth.uid() = user_id);
+
+create policy "Users can modify own leads"
+on leads for insert, update, delete
+with check (auth.uid() = user_id);
+Never “trust the frontend” to filter; if RLS is correct, even someone hitting the REST API directly with a valid JWT can’t see other users’ data.
+
+4. Keys and environment separation
+Only the anon key is allowed in browser code (e.g. LeadScraperPage.tsx, LoginPage.tsx).
+
+Service Role key and any private Postgres credentials must live only:
+
+In server‑side environments (Next.js API routes, FastAPI backend, Supabase Edge Functions).
+
+In infrastructure secrets (Vercel/Netlify/Railway env vars, not in the repo).
+
+Any admin‑level action (e.g. mass exports, admin dashboards, background lead enrichment) should go through a backend/Edge Function that:
+
+Verifies the Supabase JWT.
+
+Checks an app‑level role in the DB.
+
+Then uses the Service Role key to do privileged work.
+
+5. Frontend safety on top of Supabase
+You already started with DOMPurify/SafeText; treat that as one layer only.
+
+Sanitize any HTML‑like data coming from Supabase before rendering (scraped job descriptions, notes, bios) using a vetted sanitizer (DOMPurify, sanitize‑html) in a central utility.
+​
+
+Use textContent / simple text components for anything that does not need HTML formatting.
+​
+
+Avoid storing JWTs or secrets anywhere that an XSS could read (no manual localStorage for tokens, no embedding secrets in the DOM).
+​
+
+6. Stronger user‑visible safety
+To make users “feel safe” and actually be safer:
+
+Turn on stronger password policies (length, mixed characters, breach‑check) in the Supabase Auth settings.
+
+Enable MFA on Supabase Auth when it’s available for your flow; it greatly reduces account takeover risk.
+
+Require verified email before access to sensitive parts of the app; ensure your RLS policies only allow actions for authenticated users with confirmed emails.
+
+Rate‑limit login and sensitive operations (Supabase gives base limits; you can add extra checks in your backend / Edge Functions if needed).
+
+7. When to use a backend between your app and Supabase
+For an app like your lead scraper, a good “next‑level safe” architecture is:
+
+Public app (React/Next/etc.) talks to Supabase directly for:
+
+Signup/login, session management.
+
+Basic CRUD on user‑owned rows gated by RLS.
+
+Private backend (or Supabase Edge Functions) for:
+
+Any task needing secrets (API keys, integrations, complex scraping).
+
+Cross‑user operations (reporting, analytics).
+
+Heavy validations and additional access checks.
+
+This way:
+
+Your app never stores passwords or hashes itself; Supabase Auth does.
+
+If someone reverse‑engineers your frontend, the worst they can do with the anon key is what RLS already allows their own account to do.
+
+Admin power lives only on the backend with the Service Role key and strict checks.

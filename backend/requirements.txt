@@ -26,3 +26,5 @@ pyjwt[crypto]>=2.8.0
 # Utilities (let pip resolve compatible versions)
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
+beautifulsoup4>=4.12.0
+httpx>=0.26.0

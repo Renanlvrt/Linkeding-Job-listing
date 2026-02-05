@@ -304,9 +304,8 @@ class LinkedInGuestAPI:
                     response = await client.get(url, headers=self._get_headers())
                     
                     if response.status_code == 429:
-                        logger.warning("Rate limited by LinkedIn. Waiting 60s...")
-                        await asyncio.sleep(60)
-                        continue
+                        logger.warning("Guest API rate limited (429). Triggering fallback.")
+                        return jobs, False  # Fail fast to trigger fallback
                     
                     if response.status_code != 200:
                         logger.error(f"Guest API returned {response.status_code}")
@@ -357,6 +356,7 @@ class LinkedInGuestAPI:
             "company": job.company,
             "location": job.location,
             "url": job.url,
+            "link": job.url,  # Frontend expects 'link'
             "posted_time": job.posted_time,
             "is_easy_apply": job.is_easy_apply,
             "source": "linkedin_guest_api",

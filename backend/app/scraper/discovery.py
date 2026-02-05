@@ -35,6 +35,7 @@ from app.scraper.filters import (
 )
 from app.scraper.anti_detect import sync_random_delay
 from app.scraper.linkedin_guest_api import search_jobs_via_guest_api
+from app.scraper.validator import validate_jobs
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class JobDiscovery:
             "filtered_reposted": 0,
         }
     
-    def search_linkedin_jobs(
+    async def search_linkedin_jobs(
         self,
         keywords: str,
         location: str = "",
@@ -125,23 +126,16 @@ class JobDiscovery:
         
         try:
             # Run async Guest API search
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                guest_jobs, guest_success = loop.run_until_complete(
-                    search_jobs_via_guest_api(
-                        keywords=keywords,
-                        location=location,
-                        max_results=max_results,
-                        posted_within_days=posted_within_days,
-                        experience_levels=experience_levels,
-                        job_types=job_types,
-                        workplace_types=workplace_types,
-                        easy_apply=easy_apply,
-                    )
-                )
-            finally:
-                loop.close()
+            guest_jobs, guest_success = await search_jobs_via_guest_api(
+                keywords=keywords,
+                location=location,
+                max_results=max_results,
+                posted_within_days=posted_within_days,
+                experience_levels=experience_levels,
+                job_types=job_types,
+                workplace_types=workplace_types,
+                easy_apply=easy_apply,
+            )
             
             if guest_success and len(guest_jobs) > 0:
                 # Apply applicant filter to Guest API results
@@ -166,13 +160,24 @@ class JobDiscovery:
         
         # Fallback to DuckDuckGo
         logger.info(f"🦆 Using DuckDuckGo fallback (filters are hints only)")
-        ddg_jobs = self._search_via_duckduckgo(
-            keywords=keywords,
-            location=location,
-            max_results=max_results,
-            max_hours_old=max_hours_old,
-            max_applicants=max_applicants,
+        
+        # Run synchronous DuckDuckGo search in a separate thread to avoid blocking main loop
+        loop = asyncio.get_running_loop()
+        ddg_jobs = await loop.run_in_executor(
+            None,
+            lambda: self._search_via_duckduckgo(
+                keywords=keywords,
+                location=location,
+                max_results=max_results,
+                posted_within_days=posted_within_days,
+                max_applicants=max_applicants,
+            )
         )
+        
+        # Validate job status (check for "No longer accepting applications")
+        if ddg_jobs:
+            logger.info(f"Validating {len(ddg_jobs)} fallback jobs...")
+            ddg_jobs = await validate_jobs(ddg_jobs, max_concurrent=5)
         
         return {
             "jobs": ddg_jobs,
@@ -186,13 +191,14 @@ class JobDiscovery:
         keywords: str,
         location: str,
         max_results: int,
-        max_hours_old: int,
+        posted_within_days: int,
         max_applicants: int,
     ) -> list[dict]:
         """
         Search via DuckDuckGo (fallback method).
         Note: Filters like experience_level are hints only, not enforced.
         """
+        max_hours_old = posted_within_days * 24
         
         # Build optimized search query with LinkedIn hints
         location_terms = self._get_location_search_terms(location)
@@ -502,6 +508,7 @@ class JobDiscovery:
             "company": company[:100],
             "location": job_location,
             "link": url,
+            "url": url,  # Frontend expects 'link'
             "snippet": snippet[:500],
             "source": source,
             "discovery_method": "duckduckgo",

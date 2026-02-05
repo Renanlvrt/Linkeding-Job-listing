@@ -11,6 +11,8 @@ import {
     Grid,
     Divider,
     Alert,
+    FormControlLabel,
+    Switch,
 } from '@mui/material'
 import { supabase } from '../lib/supabase'
 import { sanitizeJobData } from '../lib/security'
@@ -39,6 +41,8 @@ interface ScrapeResult {
     location: string
     jobs_found: number
     jobs: ScrapedJob[]
+    search_method?: string  // "linkedin_guest_api" or "duckduckgo"
+    fallback_notice?: string  // Message when fallback was used
 }
 
 interface QuotaInfo {
@@ -53,11 +57,18 @@ export default function LeadScraperPage() {
     const [keywords, setKeywords] = useState('Software Engineer')
     const [location, setLocation] = useState('Remote')
     const [maxResults, setMaxResults] = useState(10)
-    const [dateFilter, setDateFilter] = useState('week')
+    const [postedWithinDays, setPostedWithinDays] = useState(7)
     const [maxApplicants, setMaxApplicants] = useState(100) // Filter: show jobs with <= this many applicants
+    // Advanced filters
+    const [experienceLevels, setExperienceLevels] = useState<string[]>([])
+    const [jobTypes, setJobTypes] = useState<string[]>(['full-time'])
+    const [workplaceTypes, setWorkplaceTypes] = useState<string[]>(['remote'])
+    const [easyApply, setEasyApply] = useState(false)
     const [results, setResults] = useState<ScrapedJob[]>([])
     const [scrapeHistory, setScrapeHistory] = useState<{ date: string; count: number; keywords: string; status: string }[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [fallbackNotice, setFallbackNotice] = useState<string | null>(null)  // DuckDuckGo fallback notice
+    const [searchMethod, setSearchMethod] = useState<string | null>(null)  // Track which API was used
     const [quota, setQuota] = useState<QuotaInfo | null>(null)
     const [savedCount, setSavedCount] = useState(0)
 
@@ -100,7 +111,12 @@ export default function LeadScraperPage() {
                     keywords,
                     location,
                     max_results: maxResults,
-                    date_filter: dateFilter,
+                    posted_within_days: postedWithinDays,
+                    max_applicants: maxApplicants,
+                    experience_levels: experienceLevels.length > 0 ? experienceLevels : undefined,
+                    job_types: jobTypes.length > 0 ? jobTypes : undefined,
+                    workplace_types: workplaceTypes.length > 0 ? workplaceTypes : undefined,
+                    easy_apply: easyApply,
                 }),
             })
 
@@ -112,6 +128,10 @@ export default function LeadScraperPage() {
 
             const data: ScrapeResult = await response.json()
             setProgress(100)
+
+            // Track search method and fallback notice
+            setSearchMethod(data.search_method || null)
+            setFallbackNotice(data.fallback_notice || null)
 
             // Update results (sanitize first)
             const cleanedJobs = data.jobs.map(job =>
@@ -133,6 +153,8 @@ export default function LeadScraperPage() {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to scrape')
             setProgress(0)
+            setFallbackNotice(null)
+            setSearchMethod(null)
         } finally {
             setIsRunning(false)
         }
@@ -170,6 +192,20 @@ export default function LeadScraperPage() {
                 </Alert>
             )}
 
+            {/* Fallback notice - show when DuckDuckGo was used */}
+            {fallbackNotice && (
+                <Alert severity="warning" sx={{ mb: 3 }} onClose={() => setFallbackNotice(null)}>
+                    <strong>Search Method: DuckDuckGo</strong> — {fallbackNotice}
+                </Alert>
+            )}
+
+            {/* Search method success indicator */}
+            {searchMethod === 'linkedin_guest_api' && results.length > 0 && (
+                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSearchMethod(null)}>
+                    ✓ Used LinkedIn's native filters — Results are accurately filtered by experience level, job type, and workplace.
+                </Alert>
+            )}
+
             <Grid container spacing={3}>
                 {/* Scrape Configuration */}
                 <Grid item xs={12} lg={8}>
@@ -203,14 +239,16 @@ export default function LeadScraperPage() {
                                     <TextField
                                         label="Posted Within"
                                         select
-                                        value={dateFilter}
-                                        onChange={(e) => setDateFilter(e.target.value)}
+                                        value={postedWithinDays}
+                                        onChange={(e) => setPostedWithinDays(Number(e.target.value))}
                                         sx={{ width: 180 }}
                                         SelectProps={{ native: true }}
                                     >
-                                        <option value="day">Last 24 hours</option>
-                                        <option value="week">Last week</option>
-                                        <option value="month">Last month</option>
+                                        <option value={1}>Last 24 hours</option>
+                                        <option value={3}>Last 3 days</option>
+                                        <option value={7}>Last week</option>
+                                        <option value={14}>Last 2 weeks</option>
+                                        <option value={30}>Last month</option>
                                     </TextField>
                                     <TextField
                                         label="Max Applicants"
@@ -219,6 +257,69 @@ export default function LeadScraperPage() {
                                         onChange={(e) => setMaxApplicants(Number(e.target.value))}
                                         sx={{ width: 150 }}
                                         helperText="Filter popular jobs"
+                                    />
+                                </Box>
+
+                                {/* Advanced Filters Row */}
+                                <Divider sx={{ my: 1 }} />
+                                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                                    Advanced Filters (LinkedIn)
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                    <TextField
+                                        label="Experience Level"
+                                        select
+                                        value={experienceLevels.join(',')}
+                                        onChange={(e) => setExperienceLevels(e.target.value ? e.target.value.split(',') : [])}
+                                        sx={{ minWidth: 160 }}
+                                        SelectProps={{ native: true }}
+                                        helperText="Filter by seniority"
+                                    >
+                                        <option value="">Any</option>
+                                        <option value="internship">Internship</option>
+                                        <option value="entry">Entry Level</option>
+                                        <option value="associate">Associate</option>
+                                        <option value="mid-senior">Mid-Senior</option>
+                                        <option value="director">Director</option>
+                                        <option value="executive">Executive</option>
+                                    </TextField>
+                                    <TextField
+                                        label="Job Type"
+                                        select
+                                        value={jobTypes.join(',')}
+                                        onChange={(e) => setJobTypes(e.target.value ? e.target.value.split(',') : [])}
+                                        sx={{ minWidth: 140 }}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="">Any</option>
+                                        <option value="full-time">Full-time</option>
+                                        <option value="part-time">Part-time</option>
+                                        <option value="contract">Contract</option>
+                                        <option value="temporary">Temporary</option>
+                                        <option value="internship">Internship</option>
+                                    </TextField>
+                                    <TextField
+                                        label="Workplace"
+                                        select
+                                        value={workplaceTypes.join(',')}
+                                        onChange={(e) => setWorkplaceTypes(e.target.value ? e.target.value.split(',') : [])}
+                                        sx={{ minWidth: 130 }}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="">Any</option>
+                                        <option value="remote">Remote</option>
+                                        <option value="hybrid">Hybrid</option>
+                                        <option value="on-site">On-site</option>
+                                    </TextField>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={easyApply}
+                                                onChange={(e) => setEasyApply(e.target.checked)}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Easy Apply Only"
                                     />
                                 </Box>
                             </Box>
