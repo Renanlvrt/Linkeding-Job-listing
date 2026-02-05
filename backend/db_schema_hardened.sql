@@ -36,7 +36,7 @@ DROP POLICY IF EXISTS "Authenticated users can view scrape_runs" ON scrape_runs;
 -- STEP 2: HELPER FUNCTION FOR EMAIL VERIFICATION CHECK
 -- This function wraps auth checks for performance and reusability
 -- ============================================================
-CREATE OR REPLACE FUNCTION auth.is_verified_user()
+CREATE OR REPLACE FUNCTION public.is_verified_user()
 RETURNS BOOLEAN AS $$
 BEGIN
     -- Check if user is authenticated AND email is confirmed
@@ -49,7 +49,7 @@ BEGIN
         )
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public', 'auth';
 
 -- ============================================================
 -- STEP 3: HARDENED USER POLICIES
@@ -59,25 +59,25 @@ CREATE POLICY "Users can view own profile (verified)" ON users
     FOR SELECT 
     USING (
         auth.uid() = id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 CREATE POLICY "Users can update own profile (verified)" ON users
     FOR UPDATE 
     USING (
         auth.uid() = id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     )
     WITH CHECK (
         auth.uid() = id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 CREATE POLICY "Users can insert own profile (verified)" ON users
     FOR INSERT 
     WITH CHECK (
         auth.uid() = id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 -- ============================================================
@@ -88,7 +88,7 @@ CREATE POLICY "Users can insert own profile (verified)" ON users
 CREATE POLICY "Verified users can read jobs" ON jobs
     FOR SELECT 
     TO authenticated
-    USING (auth.is_verified_user());
+    USING (public.is_verified_user());
 
 CREATE POLICY "Service role manages jobs" ON jobs
     FOR ALL
@@ -104,32 +104,32 @@ CREATE POLICY "Users view own applications (verified)" ON applications
     FOR SELECT 
     USING (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 CREATE POLICY "Users create own applications (verified)" ON applications
     FOR INSERT 
     WITH CHECK (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 CREATE POLICY "Users update own applications (verified)" ON applications
     FOR UPDATE 
     USING (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     )
     WITH CHECK (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 CREATE POLICY "Users delete own applications (verified)" ON applications
     FOR DELETE 
     USING (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 -- ============================================================
@@ -139,11 +139,11 @@ CREATE POLICY "Users manage own saved jobs (verified)" ON saved_jobs
     FOR ALL 
     USING (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     )
     WITH CHECK (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 -- ============================================================
@@ -153,11 +153,11 @@ CREATE POLICY "Users manage own CVs (verified)" ON cv_versions
     FOR ALL 
     USING (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     )
     WITH CHECK (
         (SELECT auth.uid()) = user_id 
-        AND auth.is_verified_user()
+        AND public.is_verified_user()
     );
 
 -- ============================================================

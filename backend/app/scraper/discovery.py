@@ -1,14 +1,43 @@
 """
-DuckDuckGo Job Discovery
-=========================
-Free, unlimited job discovery using DuckDuckGo search.
+Job Discovery Module
+=====================
+Hybrid job discovery using LinkedIn Guest API (primary) with DuckDuckGo fallback.
 
-Use this as the PRIMARY discovery method to save RapidAPI quota.
+Guest API (Primary):
+- Direct LinkedIn API with native filter support
+- Experience levels, job types, workplace types work correctly
+- 5 second delay between requests
+
+DuckDuckGo (Fallback):
+- Used when Guest API fails or is rate limited
+- Free, unlimited, but filters are hint-only
+
+Enhanced 2026:
+- Guest API with native filters
+- Automatic fallback with status notification
+- Robust applicant parsing from snippets
 """
 
 from ddgs import DDGS
 from typing import Optional
 import re
+import logging
+import asyncio
+
+from app.scraper.filters import (
+    parse_applicant_count,
+    parse_posted_time,
+    job_passes_filters,
+    days_to_linkedin_param,
+    CLOSED_PATTERNS,
+    REPOSTED_PATTERNS,
+    build_ddg_exclude_query,
+)
+from app.scraper.anti_detect import sync_random_delay
+from app.scraper.linkedin_guest_api import search_jobs_via_guest_api
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 # Location exclusion patterns - jobs to filter out based on user's target location
@@ -27,57 +56,174 @@ class JobDiscovery:
     """Discover job listings via DuckDuckGo search."""
     
     def __init__(self):
-        pass  # DDGS is created per-search now
+        self.filter_stats = {
+            "total_found": 0,
+            "passed": 0,
+            "filtered_location": 0,
+            "filtered_applicants": 0,
+            "filtered_age": 0,
+            "filtered_closed": 0,
+            "filtered_reposted": 0,
+        }
     
     def search_linkedin_jobs(
         self,
         keywords: str,
         location: str = "",
         max_results: int = 20,
-        date_filter: str = "week",  # day, week, month
-    ) -> list[dict]:
+        posted_within_days: int = 7,
+        max_applicants: int = 100,
+        date_filter: str = None,  # DEPRECATED: use posted_within_days
+        experience_levels: list[str] = None,  # ["entry", "mid-senior"]
+        job_types: list[str] = None,  # ["full-time", "contract"]
+        workplace_types: list[str] = None,  # ["remote", "hybrid"]
+        easy_apply: bool = False,
+    ) -> dict:
         """
-        Search for LinkedIn job postings via DuckDuckGo.
+        Search for LinkedIn job postings.
         
-        This is FREE and UNLIMITED - use as primary discovery!
+        Uses Guest API as primary (native filters work correctly).
+        Falls back to DuckDuckGo if Guest API fails.
         
         Args:
             keywords: Job title or keywords
             location: Location filter (e.g., "UK", "London", "Remote")
             max_results: Maximum results to return
-            date_filter: Time filter - "day", "week", or "month"
+            posted_within_days: Max job age in days (default 7)
+            max_applicants: Max applicants to include (default 100)
+            date_filter: DEPRECATED - use posted_within_days instead
+            experience_levels: Filter by experience (entry, mid-senior, etc.)
+            job_types: Filter by job type (full-time, contract, etc.)
+            workplace_types: Filter by workplace (remote, hybrid, on-site)
+            easy_apply: Only show Easy Apply jobs
         
         Returns:
-            List of discovered job URLs and snippets
+            Dict with 'jobs' list, 'search_method' (guest_api/duckduckgo), 
+            and 'fallback_used' boolean
         """
-        # Build optimized search query
-        # Include location more prominently and add recency terms
-        location_terms = self._get_location_search_terms(location)
+        # Reset stats
+        self.filter_stats = {
+            "total_found": 0,
+            "passed": 0,
+            "filtered_location": 0,
+            "filtered_applicants": 0,
+            "filtered_age": 0,
+            "filtered_closed": 0,
+            "filtered_reposted": 0,
+        }
         
-        query = f'site:linkedin.com/jobs "{keywords}" {location_terms}'
+        # Handle legacy date_filter param
+        if date_filter and not posted_within_days:
+            date_map = {"day": 1, "week": 7, "month": 30}
+            posted_within_days = date_map.get(date_filter, 7)
         
-        # Add recency hints to the query
-        if date_filter == "day":
-            query += " posted today"
-        elif date_filter == "week":
-            query += " posted this week"
+        max_hours_old = posted_within_days * 24
         
-        print(f"🔍 DuckDuckGo query: {query}")
+        # Try Guest API first (native filter support)
+        logger.info(f"🔍 Trying LinkedIn Guest API: keywords='{keywords}', location='{location}'")
+        logger.info(f"   Filters: experience={experience_levels}, job_types={job_types}, workplace={workplace_types}")
         
         try:
-            # Fetch more results than needed so we can filter
-            fetch_count = min(max_results * 3, 50)
+            # Run async Guest API search
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                guest_jobs, guest_success = loop.run_until_complete(
+                    search_jobs_via_guest_api(
+                        keywords=keywords,
+                        location=location,
+                        max_results=max_results,
+                        posted_within_days=posted_within_days,
+                        experience_levels=experience_levels,
+                        job_types=job_types,
+                        workplace_types=workplace_types,
+                        easy_apply=easy_apply,
+                    )
+                )
+            finally:
+                loop.close()
+            
+            if guest_success and len(guest_jobs) > 0:
+                # Apply applicant filter to Guest API results
+                filtered_jobs = []
+                for job in guest_jobs:
+                    # Apply max_applicants filter if we have that data
+                    if job.get("applicant_count") and job["applicant_count"] > max_applicants:
+                        continue
+                    filtered_jobs.append(job)
+                
+                logger.info(f"✓ Guest API success: {len(filtered_jobs)} jobs found")
+                return {
+                    "jobs": filtered_jobs[:max_results],
+                    "search_method": "linkedin_guest_api",
+                    "fallback_used": False,
+                }
+            else:
+                logger.warning("Guest API returned no results, falling back to DuckDuckGo")
+        
+        except Exception as e:
+            logger.warning(f"Guest API failed ({e}), falling back to DuckDuckGo")
+        
+        # Fallback to DuckDuckGo
+        logger.info(f"🦆 Using DuckDuckGo fallback (filters are hints only)")
+        ddg_jobs = self._search_via_duckduckgo(
+            keywords=keywords,
+            location=location,
+            max_results=max_results,
+            max_hours_old=max_hours_old,
+            max_applicants=max_applicants,
+        )
+        
+        return {
+            "jobs": ddg_jobs,
+            "search_method": "duckduckgo",
+            "fallback_used": True,
+            "fallback_reason": "LinkedIn Guest API unavailable. Filters (experience, job type) are hints only with DuckDuckGo.",
+        }
+    
+    def _search_via_duckduckgo(
+        self,
+        keywords: str,
+        location: str,
+        max_results: int,
+        max_hours_old: int,
+        max_applicants: int,
+    ) -> list[dict]:
+        """
+        Search via DuckDuckGo (fallback method).
+        Note: Filters like experience_level are hints only, not enforced.
+        """
+        
+        # Build optimized search query with LinkedIn hints
+        location_terms = self._get_location_search_terms(location)
+        
+        # Include f_TPR hint for DDG to prefer recent results
+        tpr_param = days_to_linkedin_param(posted_within_days)
+        query = f'site:linkedin.com/jobs "{keywords}" {location_terms}'
+        
+        # Add recency hints
+        if posted_within_days <= 1:
+            query += ' "posted today" OR "1 day ago"'
+        elif posted_within_days <= 7:
+            query += ' "posted this week" OR "days ago"'
+        
+        logger.info(f"🔍 DuckDuckGo query: {query}")
+        logger.info(f"   Filters: max_applicants={max_applicants}, posted_within_days={posted_within_days}")
+        
+        try:
+            # Fetch more results than needed so we can filter aggressively
+            fetch_count = min(max_results * 4, 60)
             
             results = DDGS().text(
                 query,
                 max_results=fetch_count,
             )
             
-            print(f"   Raw results: {len(results)}")
+            self.filter_stats["total_found"] = len(results)
+            logger.info(f"   Raw results: {len(results)}")
             
             # Parse and filter LinkedIn job URLs
             jobs = []
-            excluded_count = 0
             
             for result in results:
                 url = result.get("href", "")
@@ -86,24 +232,68 @@ class JobDiscovery:
                 if "linkedin.com/jobs" in url:
                     job = self._parse_search_result(result, location)
                     
-                    if job:
-                        # Filter by location
-                        if self._matches_location(job, location):
-                            jobs.append(job)
-                            print(f"   ✓ Found: {job.get('title', 'Unknown')[:50]}")
-                        else:
-                            excluded_count += 1
-                            print(f"   ✗ Excluded (location): {job.get('title', 'Unknown')[:40]}")
+                    if not job:
+                        continue
+                    
+                    # Extract applicant count from snippet
+                    snippet = job.get("snippet", "")
+                    job["applicants"] = parse_applicant_count(snippet)
+                    
+                    # Extract posted time from snippet
+                    posted_hours = parse_posted_time(snippet)
+                    if posted_hours:
+                        job["posted_hours_ago"] = posted_hours
+                    
+                    # TIER 1: Snippet filter for closed/reposted (FIRST CHECK)
+                    snippet_passes, snippet_reason = self._filter_by_snippet(snippet)
+                    if not snippet_passes:
+                        if "closed" in snippet_reason:
+                            self.filter_stats["filtered_closed"] += 1
+                        elif "reposted" in snippet_reason:
+                            self.filter_stats["filtered_reposted"] += 1
+                        logger.debug(f"   ✗ Excluded ({snippet_reason}): {job.get('title', 'Unknown')[:40]}")
+                        job["filter_reason"] = snippet_reason
+                        job["validation_tier"] = "snippet"
+                        continue
+                    
+                    # Filter by location
+                    if not self._matches_location(job, location):
+                        self.filter_stats["filtered_location"] += 1
+                        logger.debug(f"   ✗ Excluded (location): {job.get('title', 'Unknown')[:40]}")
+                        continue
+                    
+                    # Filter by applicants and age
+                    passes, reason = job_passes_filters(
+                        job, 
+                        max_applicants=max_applicants,
+                        max_hours_old=max_hours_old
+                    )
+                    
+                    if not passes:
+                        if "applicants" in reason:
+                            self.filter_stats["filtered_applicants"] += 1
+                        elif "old" in reason:
+                            self.filter_stats["filtered_age"] += 1
+                        logger.debug(f"   ✗ Excluded ({reason}): {job.get('title', 'Unknown')[:40]}")
+                        continue
+                    
+                    # Job passed all filters
+                    job["filter_passed"] = True
+                    jobs.append(job)
+                    self.filter_stats["passed"] += 1
+                    
+                    applicants_str = f"{job.get('applicants', '?')} applicants" if job.get('applicants') is not None else "unknown applicants"
+                    logger.info(f"   ✓ Found: {job.get('title', 'Unknown')[:50]} ({applicants_str})")
                 
                 # Stop if we have enough
                 if len(jobs) >= max_results:
                     break
             
-            print(f"   Jobs parsed: {len(jobs)}, excluded: {excluded_count}")
+            logger.info(f"   Results: {len(jobs)} passed, {self.filter_stats}")
             return jobs
             
         except Exception as e:
-            print(f"❌ DuckDuckGo search error: {e}")
+            logger.error(f"❌ DuckDuckGo search error: {e}")
             return []
     
     def _get_location_search_terms(self, location: str) -> str:
@@ -151,6 +341,34 @@ class JobDiscovery:
                 return False
         
         return True
+    
+    def _filter_by_snippet(self, snippet: str) -> tuple[bool, str]:
+        """
+        Tier 1: Pre-filter by DDG snippet text for closed/reposted jobs.
+        
+        Args:
+            snippet: DDG result snippet text
+        
+        Returns:
+            (passes, reason) - False if closed/reposted detected
+        """
+        if not snippet:
+            return True, "no_snippet"
+        
+        text_lower = snippet.lower()
+        
+        # Check for CLOSED patterns
+        for pattern in CLOSED_PATTERNS:
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                return False, "closed_in_snippet"
+        
+        # Check for REPOSTED patterns
+        for pattern in REPOSTED_PATTERNS:
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                return False, "reposted_in_snippet"
+        
+        return True, "passed"
+
     
     def search_indeed_jobs(
         self,

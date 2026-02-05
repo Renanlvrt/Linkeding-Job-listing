@@ -42,20 +42,24 @@ class LinkedInAPIClient:
         self,
         keywords: str,
         location: str = "Remote",
-        date_posted: str = "month",  # day, week, month
+        posted_within_days: int = 7,
+        max_applicants: int = 100,
+        date_posted: str = None,  # DEPRECATED: use posted_within_days
         job_type: Optional[str] = None,  # full-time, part-time, contract
         experience_level: Optional[str] = None,  # entry, associate, mid-senior
         limit: int = 10,
     ) -> dict:
         """
-        Search for jobs on LinkedIn.
+        Search for jobs on LinkedIn via RapidAPI.
         
         IMPORTANT: Each call uses 1 of your 100 monthly requests!
         
         Args:
             keywords: Job title or keywords (e.g., "Software Engineer")
             location: Location filter (e.g., "London, UK" or "Remote")
-            date_posted: Time filter - "day", "week", or "month"
+            posted_within_days: Max job age in days (default 7)
+            max_applicants: Max applicants to include (default 100)
+            date_posted: DEPRECATED - mapped from posted_within_days
             job_type: Employment type filter
             experience_level: Experience level filter
             limit: Max results (keep low to save bandwidth)
@@ -72,6 +76,15 @@ class LinkedInAPIClient:
                 "jobs": [],
                 "requests_used": self._request_count,
             }
+        
+        # Map posted_within_days to RapidAPI date_posted param
+        if not date_posted:
+            if posted_within_days <= 1:
+                date_posted = "day"
+            elif posted_within_days <= 7:
+                date_posted = "week"
+            else:
+                date_posted = "month"
         
         payload = {
             "search_terms": keywords,
@@ -100,9 +113,41 @@ class LinkedInAPIClient:
                 
                 if response.status_code == 200:
                     jobs = response.json()
+                    
+                    # Post-filter by applicant count
+                    filtered_jobs = []
+                    filtered_count = 0
+                    
+                    for job in jobs:
+                        # Extract applicant count from job data
+                        applicants = job.get("applicants_count") or job.get("num_applicants")
+                        
+                        # Parse if string
+                        if isinstance(applicants, str):
+                            try:
+                                if "+" in applicants:
+                                    applicants = int(applicants.replace("+", "")) + 1
+                                else:
+                                    applicants = int(applicants.replace(",", ""))
+                            except ValueError:
+                                applicants = None
+                        
+                        job["applicants"] = applicants
+                        
+                        # Filter by max_applicants
+                        if applicants is not None and applicants > max_applicants:
+                            filtered_count += 1
+                            continue
+                        
+                        filtered_jobs.append(job)
+                        
+                        if len(filtered_jobs) >= limit:
+                            break
+                    
                     return {
-                        "jobs": jobs[:limit],  # Limit results
+                        "jobs": filtered_jobs,
                         "total_found": len(jobs),
+                        "filtered_out": filtered_count,
                         "requests_used": self._request_count,
                         "requests_remaining": self.requests_remaining,
                     }

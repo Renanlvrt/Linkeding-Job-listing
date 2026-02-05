@@ -37,7 +37,11 @@ class ScrapeRequest(BaseModel):
     location: Optional[str] = Field("Remote", max_length=100)
     user_skills: Optional[list[str]] = Field(None, max_length=50)
     max_results: int = Field(20, ge=1, le=100)
+    posted_within_days: int = Field(7, ge=1, le=30)
+    max_applicants: int = Field(100, ge=0, le=1000)
     use_rapidapi: bool = False
+    validate_jobs: bool = False
+    validate_top_n: int = Field(20, ge=0, le=50)
 
     @field_validator('keywords', 'location', mode='before')
     @classmethod
@@ -63,7 +67,14 @@ class QuickSearchRequest(BaseModel):
     keywords: str = Field(..., min_length=2, max_length=100)
     location: Optional[str] = Field("", max_length=100)
     max_results: int = Field(10, ge=1, le=50)
-    date_filter: str = Field("week", pattern="^(day|week|month)$")
+    posted_within_days: int = Field(7, ge=1, le=30)
+    max_applicants: int = Field(100, ge=0, le=1000)
+    date_filter: Optional[str] = Field(None, pattern="^(day|week|month)$")  # DEPRECATED
+    # New advanced filters
+    experience_levels: Optional[list[str]] = Field(None, description="Filter by experience: entry, mid-senior, etc.")
+    job_types: Optional[list[str]] = Field(None, description="Filter by type: full-time, contract, etc.")
+    workplace_types: Optional[list[str]] = Field(None, description="Filter by workplace: remote, hybrid, on-site")
+    easy_apply: bool = Field(False, description="Only show Easy Apply jobs")
 
     @field_validator('keywords', 'location', mode='before')
     @classmethod
@@ -99,7 +110,11 @@ async def run_scrape_job(
     location: str,
     user_skills: list[str],
     max_results: int,
+    posted_within_days: int,
+    max_applicants: int,
     use_rapidapi: bool,
+    validate_jobs: bool,
+    validate_top_n: int,
     user_id: Optional[str],
 ):
     """Background task for scraping - logs user who initiated."""
@@ -112,7 +127,11 @@ async def run_scrape_job(
             location=location,
             user_skills=user_skills or [],
             max_jobs=max_results,
+            posted_within_days=posted_within_days,
+            max_applicants=max_applicants,
             use_rapidapi=use_rapidapi,
+            validate_jobs=validate_jobs,
+            validate_top_n=validate_top_n,
         )
         
         # Sanitize job data before storing
@@ -124,6 +143,7 @@ async def run_scrape_job(
         SCRAPE_RUNS[run_id]["jobs"] = sanitized_jobs
         SCRAPE_RUNS[run_id]["completed_at"] = datetime.utcnow().isoformat()
         SCRAPE_RUNS[run_id]["sources"] = result.get("sources", {})
+        SCRAPE_RUNS[run_id]["filter_stats"] = result.get("filter_stats", {})
         SCRAPE_RUNS[run_id]["rapidapi_remaining"] = result.get("rapidapi_remaining")
         
     except Exception as e:
@@ -177,7 +197,11 @@ async def start_scrape(
         request.location,
         request.user_skills or [],
         request.max_results,
+        request.posted_within_days,
+        request.max_applicants,
         request.use_rapidapi,
+        request.validate_jobs,
+        request.validate_top_n,
         user_id,
     )
     
@@ -197,28 +221,48 @@ async def quick_search(
     """
     Quick job discovery - FREE and INSTANT.
     
+    Uses LinkedIn Guest API (native filters) with DuckDuckGo fallback.
     Optional authentication. Rate limited: 100 requests per minute.
     """
     user_id = claims.get("sub") if claims else None
     log_request(req, user_id)
     
-    jobs = job_discovery.search_linkedin_jobs(
+    # Discovery returns dict with jobs, search_method, fallback info
+    result = job_discovery.search_linkedin_jobs(
         keywords=request.keywords,
         location=request.location,
         max_results=request.max_results,
-        date_filter=request.date_filter,
+        posted_within_days=request.posted_within_days,
+        max_applicants=request.max_applicants,
+        experience_levels=request.experience_levels,
+        job_types=request.job_types,
+        workplace_types=request.workplace_types,
+        easy_apply=request.easy_apply,
     )
+    
+    # Extract jobs and metadata
+    jobs = result.get("jobs", [])
+    search_method = result.get("search_method", "unknown")
+    fallback_used = result.get("fallback_used", False)
+    fallback_reason = result.get("fallback_reason", None)
     
     # Sanitize scraped data
     sanitized_jobs = [sanitize_job_data(job) for job in jobs]
     
-    return {
+    response = {
         "status": "OK",
         "keywords": request.keywords,
         "location": request.location,
         "jobs_found": len(sanitized_jobs),
         "jobs": sanitized_jobs,
+        "search_method": search_method,  # "linkedin_guest_api" or "duckduckgo"
     }
+    
+    # Include fallback notice if DuckDuckGo was used
+    if fallback_used:
+        response["fallback_notice"] = fallback_reason or "Search used fallback method. Filters may be approximate."
+    
+    return response
 
 
 @router.get("/status/{run_id}", dependencies=[Depends(check_rate_limit)])
