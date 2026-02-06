@@ -14,7 +14,7 @@ Enhanced 2026:
 - Structured filter statistics
 """
 
-from typing import Optional
+from typing import Optional, Callable, Any
 from datetime import datetime
 import asyncio
 import logging
@@ -48,6 +48,11 @@ class ScrapingOrchestrator:
         validate_jobs: bool = False,
         validate_top_n: int = 20,
         validate_html: bool = True,  # Tier 2 HTML validation
+        experience_levels: Optional[list[str]] = None,
+        job_types: Optional[list[str]] = None,
+        workplace_types: Optional[list[str]] = None,
+        easy_apply: bool = False,
+        on_progress: Optional[Callable[[int, str], Any]] = None,
     ) -> dict:
         """
         Run a full scraping job.
@@ -69,6 +74,11 @@ class ScrapingOrchestrator:
             validate_jobs: Run Playwright validation (accurate but slow)
             validate_top_n: How many jobs to validate (default 20)
             validate_html: Run HTML validation (default True, fast)
+            experience_levels: Filter by experience level
+            job_types: Filter by job type
+            workplace_types: Filter by workplace type
+            easy_apply: Only show Easy Apply jobs
+            on_progress: Callback for progress updates
         
         Returns:
             Scrape results with jobs and metadata
@@ -82,14 +92,21 @@ class ScrapingOrchestrator:
         logger.info(f"🔍 Discovering jobs for '{keywords}' in {location}...")
         logger.info(f"   Filters: posted_within_days={posted_within_days}, max_applicants={max_applicants}")
         
-        discovered = job_discovery.search_linkedin_jobs(
+        if on_progress: on_progress(10, f"Discovering jobs for '{keywords}'...")
+        discovery_result = await job_discovery.search_linkedin_jobs(
             keywords=keywords,
             location=location,
-            max_results=max_jobs * 2,  # Fetch extra for filtering
+            max_results=max_jobs * 10,  # Fetch 10x for filtering
             posted_within_days=posted_within_days,
             max_applicants=max_applicants,
+            experience_levels=experience_levels,
+            job_types=job_types,
+            workplace_types=workplace_types,
+            easy_apply=easy_apply,
+            on_progress=on_progress,
         )
         
+        discovered = discovery_result.get("jobs", [])
         filter_stats = job_discovery.filter_stats.copy()
         logger.info(f"   Found {len(discovered)} jobs via DuckDuckGo")
         
@@ -118,7 +135,7 @@ class ScrapingOrchestrator:
         # Step 2.5: TIER 2 - HTML Validation (fast, no browser)
         html_validation_stats = None
         if validate_html:
-            logger.info(f"📄 Running Tier 2 HTML validation ({len(all_jobs)} jobs)...")
+            if on_progress: on_progress(60, "Running HTML validation...")
             all_jobs, html_validation_stats = await validate_jobs_html(
                 jobs=all_jobs,
                 max_applicants=max_applicants,
@@ -130,8 +147,7 @@ class ScrapingOrchestrator:
         # Step 3: TIER 3 - Playwright validation (top N only)
         playwright_validation_stats = None
         if validate_jobs and PLAYWRIGHT_AVAILABLE:
-            logger.info(f"🔬 Running Tier 3 Playwright validation (top {validate_top_n} jobs)...")
-            
+            if on_progress: on_progress(70, "Running Playwright validation...")
             validated = await job_validator.validate_jobs(
                 jobs=all_jobs,
                 max_applicants=max_applicants,
@@ -151,6 +167,7 @@ class ScrapingOrchestrator:
         
         # Step 4: Parse and score with Gemini
         if self.use_gemini and user_skills:
+            if on_progress: on_progress(80, "Analyzing matches with Gemini AI...")
             logger.info(f"🤖 Parsing jobs with Gemini AI...")
             enriched_jobs = []
             
@@ -272,13 +289,14 @@ class ScrapingOrchestrator:
         Returns:
             List of discovered jobs (pre-filtered)
         """
-        return job_discovery.search_linkedin_jobs(
+        result = await job_discovery.search_linkedin_jobs(
             keywords=keywords,
             location=location,
             max_results=max_jobs,
             posted_within_days=posted_within_days,
             max_applicants=max_applicants,
         )
+        return result.get("jobs", [])
 
 
 # Singleton instance

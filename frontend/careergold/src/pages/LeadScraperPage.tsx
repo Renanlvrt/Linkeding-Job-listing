@@ -35,16 +35,6 @@ interface ScrapedJob {
     location?: string | null
 }
 
-interface ScrapeResult {
-    status: string
-    keywords: string
-    location: string
-    jobs_found: number
-    jobs: ScrapedJob[]
-    search_method?: string  // "linkedin_guest_api" or "duckduckgo"
-    fallback_notice?: string  // Message when fallback was used
-}
-
 interface QuotaInfo {
     requests_remaining: number
     monthly_limit: number
@@ -54,6 +44,7 @@ interface QuotaInfo {
 export default function LeadScraperPage() {
     const [isRunning, setIsRunning] = useState(false)
     const [progress, setProgress] = useState(0)
+    const [progressMessage, setProgressMessage] = useState('')
     const [keywords, setKeywords] = useState('Software Engineer')
     const [location, setLocation] = useState('Remote')
     const [maxResults, setMaxResults] = useState(10)
@@ -93,15 +84,18 @@ export default function LeadScraperPage() {
 
     const handleStartScrape = async () => {
         setIsRunning(true)
-        setProgress(10)
+        setProgress(0)
+        setProgressMessage('Initializing search...')
         setError(null)
+        setResults([])
+        setSavedCount(0)
 
         try {
-            // Call the real backend API
             const { data: { session } } = await supabase.auth.getSession()
             const token = session?.access_token
 
-            const response = await fetch(`${API_BASE}/api/scraper/quick`, {
+            // 1. Start the scrape job
+            const startRes = await fetch(`${API_BASE}/api/scraper/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -120,43 +114,75 @@ export default function LeadScraperPage() {
                 }),
             })
 
-            setProgress(50)
-
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`)
+            if (!startRes.ok) {
+                const errorData = await startRes.json()
+                throw new Error(errorData.detail || `Failed to start: ${startRes.status}`)
             }
 
-            const data: ScrapeResult = await response.json()
-            setProgress(100)
+            const { run_id } = await startRes.json()
 
-            // Track search method and fallback notice
-            setSearchMethod(data.search_method || null)
-            setFallbackNotice(data.fallback_notice || null)
+            // 2. Poll for status
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch(`${API_BASE}/api/scraper/status/${run_id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
 
-            // Update results (sanitize first)
-            const cleanedJobs = data.jobs.map(job =>
-                sanitizeJobData(job as unknown as Record<string, unknown>) as unknown as ScrapedJob
-            )
-            setResults(cleanedJobs)
+                    if (!statusRes.ok) {
+                        clearInterval(pollInterval)
+                        setIsRunning(false)
+                        throw new Error(`Status check failed: ${statusRes.status}`)
+                    }
 
-            // Add to history
-            setScrapeHistory(prev => [
-                {
-                    date: 'Just now',
-                    count: data.jobs_found,
-                    keywords: data.keywords,
-                    status: 'Completed',
-                },
-                ...prev.slice(0, 4), // Keep last 5
-            ])
+                    const runData = await statusRes.json()
+
+                    setProgress(runData.progress || 0)
+                    setProgressMessage(runData.message || 'Scraping...')
+
+                    if (runData.status === 'COMPLETED') {
+                        clearInterval(pollInterval)
+                        setIsRunning(false)
+                        setProgress(100)
+
+                        // Process results
+                        const cleanedJobs = runData.jobs.map((job: any) =>
+                            sanitizeJobData(job as unknown as Record<string, unknown>) as unknown as ScrapedJob
+                        )
+                        setResults(cleanedJobs)
+                        setSearchMethod(runData.search_method || null)
+                        setFallbackNotice(runData.fallback_notice || null)
+
+                        // Add to history
+                        setScrapeHistory(prev => [
+                            {
+                                date: 'Just now',
+                                count: runData.jobs_found,
+                                keywords: runData.keywords,
+                                status: 'Completed',
+                            },
+                            ...prev.slice(0, 4),
+                        ])
+                    } else if (runData.status === 'FAILED') {
+                        clearInterval(pollInterval)
+                        setIsRunning(false)
+                        setError(runData.error || 'Scrape job failed')
+                    } else if (runData.status === 'CANCELLED') {
+                        clearInterval(pollInterval)
+                        setIsRunning(false)
+                        setProgress(0)
+                        setProgressMessage('Scrape cancelled')
+                    }
+                } catch (err) {
+                    clearInterval(pollInterval)
+                    setIsRunning(false)
+                    setError(err instanceof Error ? err.message : 'Polling failed')
+                }
+            }, 2000)
 
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to scrape')
-            setProgress(0)
-            setFallbackNotice(null)
-            setSearchMethod(null)
-        } finally {
+            setError(err instanceof Error ? err.message : 'Failed to start scrape')
             setIsRunning(false)
+            setProgress(0)
         }
     }
 
@@ -348,7 +374,7 @@ export default function LeadScraperPage() {
                                     }}
                                 />
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', color: 'text.secondary' }}>
-                                    <Typography variant="body2">Searching for "{keywords}"...</Typography>
+                                    <Typography variant="body2">{progressMessage || `Searching for "${keywords}"...`}</Typography>
                                     <Typography variant="body2">{progress}% complete</Typography>
                                 </Box>
                             </CardContent>

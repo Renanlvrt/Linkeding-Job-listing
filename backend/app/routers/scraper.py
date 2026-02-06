@@ -42,6 +42,11 @@ class ScrapeRequest(BaseModel):
     use_rapidapi: bool = False
     validate_jobs: bool = False
     validate_top_n: int = Field(20, ge=0, le=50)
+    # Advanced filters
+    experience_levels: Optional[list[str]] = Field(None, description="Filter by experience: entry, mid-senior, etc.")
+    job_types: Optional[list[str]] = Field(None, description="Filter by type: full-time, contract, etc.")
+    workplace_types: Optional[list[str]] = Field(None, description="Filter by workplace: remote, hybrid, on-site")
+    easy_apply: bool = Field(False, description="Only show Easy Apply jobs")
 
     @field_validator('keywords', 'location', mode='before')
     @classmethod
@@ -116,12 +121,20 @@ async def run_scrape_job(
     validate_jobs: bool,
     validate_top_n: int,
     user_id: Optional[str],
+    experience_levels: Optional[list[str]] = None,
+    job_types: Optional[list[str]] = None,
+    workplace_types: Optional[list[str]] = None,
+    easy_apply: bool = False,
 ):
     """Background task for scraping - logs user who initiated."""
     try:
         SCRAPE_RUNS[run_id]["status"] = "RUNNING"
         SCRAPE_RUNS[run_id]["progress"] = 10
         
+        def update_progress(p: int, msg: str):
+            SCRAPE_RUNS[run_id]["progress"] = p
+            SCRAPE_RUNS[run_id]["message"] = msg
+
         result = await orchestrator.run_scrape(
             keywords=keywords,
             location=location,
@@ -132,6 +145,11 @@ async def run_scrape_job(
             use_rapidapi=use_rapidapi,
             validate_jobs=validate_jobs,
             validate_top_n=validate_top_n,
+            experience_levels=experience_levels,
+            job_types=job_types,
+            workplace_types=workplace_types,
+            easy_apply=easy_apply,
+            on_progress=update_progress,
         )
         
         # Sanitize job data before storing
@@ -203,6 +221,10 @@ async def start_scrape(
         request.validate_jobs,
         request.validate_top_n,
         user_id,
+        request.experience_levels,
+        request.job_types,
+        request.workplace_types,
+        request.easy_apply,
     )
     
     return ScrapeResponse(

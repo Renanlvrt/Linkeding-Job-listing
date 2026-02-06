@@ -1,12 +1,19 @@
 import { useState } from 'react'
-import { Box, Typography, Chip, IconButton } from '@mui/material'
+import { Box, Typography, Chip, IconButton, CircularProgress } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import JobDetailsSideSheet from '../components/roles/JobDetailsSideSheet'
-import { mockJobs, Job } from '../mocks/data'
+import { Job } from '../mocks/data'
+import { useJobs } from '../hooks/useJobs'
+import { mapDbJobToUi } from '../lib/utils'
 
 export default function RolesPage() {
     const [selectedJob, setSelectedJob] = useState<Job | null>(null)
     const [sideSheetOpen, setSideSheetOpen] = useState(false)
+
+    // Fetch all jobs from Supabase
+    const { data: jobs, isLoading, error } = useJobs()
+
+    const displayJobs: Job[] = (jobs || []).map(mapDbJobToUi)
 
     const handleJobClick = (job: Job) => {
         setSelectedJob(job)
@@ -116,39 +123,47 @@ export default function RolesPage() {
 
             {/* Roles DataGrid */}
             <Box sx={{ flex: 1, minHeight: 400 }}>
-                <DataGrid
-                    rows={mockJobs}
-                    columns={columns}
-                    pageSizeOptions={[10, 25, 50]}
-                    initialState={{
-                        pagination: { paginationModel: { pageSize: 10 } },
-                    }}
-                    disableRowSelectionOnClick
-                    onRowClick={(params) => handleJobClick(params.row as Job)}
-                    sx={{
-                        border: 1,
-                        borderColor: 'divider',
-                        borderRadius: 2,
-                        bgcolor: 'background.paper',
-                        '& .MuiDataGrid-columnHeaders': {
-                            bgcolor: 'grey.50',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            fontSize: '0.75rem',
-                            letterSpacing: '0.05em',
-                        },
-                        '& .MuiDataGrid-row:hover': {
-                            cursor: 'pointer',
-                            bgcolor: 'rgba(183, 134, 11, 0.04)',
-                        },
-                        '& .MuiDataGrid-cell:focus': {
-                            outline: 'none',
-                        },
-                        '& .MuiDataGrid-columnHeader:focus': {
-                            outline: 'none',
-                        },
-                    }}
-                />
+                {isLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : error ? (
+                    <Typography color="error">Failed to load roles: {String(error)}</Typography>
+                ) : (
+                    <DataGrid
+                        rows={displayJobs}
+                        columns={columns}
+                        pageSizeOptions={[10, 25, 50]}
+                        initialState={{
+                            pagination: { paginationModel: { pageSize: 25 } },
+                        }}
+                        disableRowSelectionOnClick
+                        onRowClick={(params) => handleJobClick(params.row as Job)}
+                        sx={{
+                            border: 1,
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            bgcolor: 'background.paper',
+                            '& .MuiDataGrid-columnHeaders': {
+                                bgcolor: 'grey.50',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                fontSize: '0.75rem',
+                                letterSpacing: '0.05em',
+                            },
+                            '& .MuiDataGrid-row:hover': {
+                                cursor: 'pointer',
+                                bgcolor: 'rgba(183, 134, 11, 0.04)',
+                            },
+                            '& .MuiDataGrid-cell:focus': {
+                                outline: 'none',
+                            },
+                            '& .MuiDataGrid-columnHeader:focus': {
+                                outline: 'none',
+                            },
+                        }}
+                    />
+                )}
             </Box>
 
             {/* Job Details Side Sheet */}

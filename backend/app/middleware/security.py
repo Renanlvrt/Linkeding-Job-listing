@@ -75,27 +75,50 @@ class JWTValidator:
         try:
             # First, decode without verification to get header
             unverified_header = jwt.get_unverified_header(token)
+            alg = unverified_header.get("alg")
             
             # CRITICAL: Reject 'alg: none' attacks
-            if unverified_header.get("alg", "").lower() == "none":
+            if not alg or alg.lower() == "none":
                 raise HTTPException(
                     status_code=401, 
-                    detail="Invalid token algorithm"
+                    detail="Invalid token algorithm: alg header missing or set to none"
                 )
             
-            # Get signing key from JWKS
-            if self.jwk_client:
-                signing_key = self.jwk_client.get_signing_key_from_jwt(token)
-                key = signing_key.key
+            # Determine which key to use based on algorithm
+            if alg.startswith("HS"):
+                # Symmetric algorithms use the secret
+                key = SUPABASE_JWT_SECRET
+            elif (alg.startswith("RS") or alg.startswith("ES")) and self.jwk_client:
+                # Asymmetric algorithms use JWKS (Public Key)
+                try:
+                    signing_key = self.jwk_client.get_signing_key_from_jwt(token)
+                    key = signing_key.key
+                except Exception as e:
+                    # Fallback to secret if JWKS fails (though unlikely to work for asymmetric)
+                    print(f"DEBUG: JWKS lookup failed for {alg}: {str(e)}")
+                    key = SUPABASE_JWT_SECRET
             else:
-                # Fallback to HS256 with secret (less secure but works for dev)
+                # Default fallback
                 key = SUPABASE_JWT_SECRET
             
+            if not key or key == "your_jwt_secret_here":
+                raise HTTPException(
+                    status_code=401,
+                    detail=(
+                        "Server configuration error: SUPABASE_JWT_SECRET is missing or invalid. "
+                        "Please get it from Supabase Dashboard -> Project Settings -> API -> JWT Settings -> JWT Secret "
+                        "and update your .env file."
+                    )
+                )
+
+            # Define allowed algorithms
+            allowed_algs = ["HS256", "HS384", "HS512", "RS256", "ES256"]
+
             # Decode and validate
             claims = jwt.decode(
                 token,
                 key,
-                algorithms=["RS256", "HS256"],
+                algorithms=allowed_algs,
                 audience="authenticated",
                 issuer=f"{SUPABASE_URL}/auth/v1",
                 options={
@@ -109,11 +132,12 @@ class JWTValidator:
             
             # Additional checks
             
-            # 1. Check email is verified
-            if not claims.get("email_confirmed_at"):
+            # 1. Check email is verified (Optional in development)
+            require_verified = os.getenv("REQUIRE_VERIFIED_EMAIL", "false").lower() == "true"
+            if require_verified and not claims.get("email_confirmed_at"):
                 raise HTTPException(
                     status_code=403,
-                    detail="Email not verified"
+                    detail="Email not verified. Please confirm your email in Supabase or set REQUIRE_VERIFIED_EMAIL=false in .env"
                 )
             
             # 2. Check token is not too old (issued within last 24h for refresh window)
@@ -132,6 +156,10 @@ class JWTValidator:
             raise HTTPException(status_code=401, detail="Invalid audience")
         except jwt.InvalidIssuerError:
             raise HTTPException(status_code=401, detail="Invalid issuer")
+        except jwt.InvalidAlgorithmError:
+            header = jwt.get_unverified_header(token)
+            current_alg = header.get("alg", "unknown")
+            raise HTTPException(status_code=401, detail=f"JWT Algorithm '{current_alg}' is not allowed. Allowed: {allowed_algs}")
         except jwt.InvalidTokenError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
@@ -289,6 +317,11 @@ def sanitize_job_data(job: dict) -> dict:
     external_id = job.get("external_id")
     if not external_id and job.get("job_id"):
         external_id = str(job.get("job_id"))
+
+    # Ensure external_id is None if empty to avoid unique constraint issues in DB
+    sanitized_id = sanitize_string(external_id or "", 100)
+    if not sanitized_id:
+        sanitized_id = None
         
     return {
         "title": sanitize_string(job.get("title", ""), 200),
@@ -299,7 +332,7 @@ def sanitize_job_data(job: dict) -> dict:
         "snippet": sanitize_string(job.get("snippet", ""), 500),
         "applicants": int(job.get("applicants", 0)) if job.get("applicants") else None,
         "source": sanitize_string(job.get("source", ""), 50),
-        "external_id": sanitize_string(external_id or "", 100),
+        "external_id": sanitized_id,
         "match_score": int(job.get("match_score", 0)) if job.get("match_score") is not None else 0,
         "skills_matched": [sanitize_string(s, 50) for s in job.get("skills_matched", [])] if isinstance(job.get("skills_matched"), list) else [],
     }

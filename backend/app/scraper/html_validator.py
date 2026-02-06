@@ -101,7 +101,12 @@ async def validate_job_html(
             
             if response.status_code != 200:
                 result["reason"] = f"http_{response.status_code}"
-                result["passes"] = False
+                # Fail-open on rate limits or soft blocks
+                if response.status_code in [429, 999, 403]:
+                    result["passes"] = True
+                    logger.warning(f"   ⚠ HTML: Blocked ({response.status_code}) - {url[:50]}")
+                else:
+                    result["passes"] = False
                 return result
             
             html = response.text

@@ -31,8 +31,10 @@ class Settings(BaseSettings):
     debug: bool = True
     
     class Config:
-        env_file = "../.env"
+        # Look in current dir, then parent dir (accommodates both root and backend starts)
+        env_file = [".env", "../.env", "../../.env"]
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 @lru_cache()

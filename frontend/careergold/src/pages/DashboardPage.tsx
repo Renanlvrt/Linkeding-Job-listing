@@ -1,10 +1,11 @@
-import { Box, Typography, Button, Fab, Grid, Card, CardContent, CircularProgress } from '@mui/material'
+import { Box, Typography, Button, Fab, Grid, Card, CircularProgress } from '@mui/material'
 import RoleCard from '../components/roles/RoleCard'
 import JobDetailsSideSheet from '../components/roles/JobDetailsSideSheet'
 import { Job } from '../mocks/data'
 import { useJobs } from '../hooks/useJobs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { mapDbJobToUi } from '../lib/utils'
 
 export default function DashboardPage() {
     const [selectedJob, setSelectedJob] = useState<Job | null>(null)
@@ -24,22 +25,7 @@ export default function DashboardPage() {
     }
 
     // Map Supabase jobs to the Job type expected by RoleCard
-    const displayJobs: Job[] = (jobs || []).map(j => ({
-        id: j.id,
-        title: j.title,
-        company: j.company,
-        location: j.location || 'Remote',
-        matchScore: j.match_score,
-        applicants: j.applicants !== null ? j.applicants : (j.applicants_count || 0),
-        postedAgo: j.posted_date || (j.scraped_at ? getTimeAgo(j.scraped_at) : 'Recently'),
-        status: j.status as Job['status'],
-        salaryRange: j.salary_range || undefined,
-        description: j.description || j.snippet || undefined,
-        link: j.apply_link || j.link, // Pass link for "Apply Now"
-        skills: Array.isArray(j.skills_matched)
-            ? j.skills_matched.map((s: string) => ({ name: s, matched: true }))
-            : [],
-    }))
+    const displayJobs: Job[] = (jobs || []).map(mapDbJobToUi)
 
     return (
         <Box sx={{ position: 'relative', minHeight: '100%' }}>
@@ -57,26 +43,55 @@ export default function DashboardPage() {
                             Top Matches
                         </Typography>
                         <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1, fontWeight: 500 }}>
-                            {isLoading ? 'Loading...' : `${displayJobs.length} roles from Supabase database`}
+                            {isLoading ? 'Loading...' : `${displayJobs.length} roles found`}
+                            {!isLoading && displayJobs.length >= 20 && (
+                                <Button
+                                    size="small"
+                                    onClick={() => navigate('/roles')}
+                                    sx={{ ml: 2, textTransform: 'none', fontWeight: 600 }}
+                                >
+                                    View All ({jobs?.length || 20}+)
+                                </Button>
+                            )}
                         </Typography>
                     </Box>
-                    <Button
-                        variant="outlined"
-                        startIcon={<span className="material-symbols-outlined">tune</span>}
-                        sx={{
-                            height: 40,
-                            px: 2,
-                            borderColor: 'divider',
-                            color: 'text.secondary',
-                            bgcolor: 'background.paper',
-                            '&:hover': {
-                                bgcolor: 'grey.50',
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={() => navigate('/roles')}
+                            startIcon={<span className="material-symbols-outlined">list</span>}
+                            sx={{
+                                height: 40,
+                                px: 2,
                                 borderColor: 'divider',
-                            },
-                        }}
-                    >
-                        Filter Results
-                    </Button>
+                                color: 'text.secondary',
+                                bgcolor: 'background.paper',
+                                '&:hover': {
+                                    bgcolor: 'grey.50',
+                                    borderColor: 'divider',
+                                },
+                            }}
+                        >
+                            All Roles
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<span className="material-symbols-outlined">tune</span>}
+                            sx={{
+                                height: 40,
+                                px: 2,
+                                borderColor: 'divider',
+                                color: 'text.secondary',
+                                bgcolor: 'background.paper',
+                                '&:hover': {
+                                    bgcolor: 'grey.50',
+                                    borderColor: 'divider',
+                                },
+                            }}
+                        >
+                            Filter
+                        </Button>
+                    </Box>
                 </Box>
             </Box>
 
@@ -107,6 +122,20 @@ export default function DashboardPage() {
                             </Grid>
                         ))}
                     </Grid>
+                )}
+
+                {!isLoading && displayJobs.length >= 20 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                        <Button
+                            variant="text"
+                            color="primary"
+                            onClick={() => navigate('/roles')}
+                            sx={{ fontWeight: 700, fontSize: '0.875rem' }}
+                        >
+                            See all saved roles ({jobs?.length || 20}+)
+                            <span className="material-symbols-outlined" style={{ marginLeft: 8 }}>arrow_forward</span>
+                        </Button>
+                    </Box>
                 )}
             </Box>
 
@@ -178,15 +207,4 @@ export default function DashboardPage() {
     )
 }
 
-// Helper function
-function getTimeAgo(dateString: string): string {
-    const date = new Date(dateString)
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-    if (seconds < 60) return 'Just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-    return `${Math.floor(seconds / 604800)}w ago`
-}

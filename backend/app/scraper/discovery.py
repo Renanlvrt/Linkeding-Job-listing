@@ -19,7 +19,7 @@ Enhanced 2026:
 """
 
 from ddgs import DDGS
-from typing import Optional
+from typing import Optional, Callable, Any
 import re
 import logging
 import asyncio
@@ -79,6 +79,7 @@ class JobDiscovery:
         job_types: list[str] = None,  # ["full-time", "contract"]
         workplace_types: list[str] = None,  # ["remote", "hybrid"]
         easy_apply: bool = False,
+        on_progress: Optional[Callable[[int, str], Any]] = None,
     ) -> dict:
         """
         Search for LinkedIn job postings.
@@ -146,6 +147,8 @@ class JobDiscovery:
                 for job in guest_jobs:
                     # Apply max_applicants filter if we have that data
                     if job.get("applicant_count") and job["applicant_count"] > max_applicants:
+                        self.filter_stats["filtered_applicants"] += 1
+                        logger.debug(f"   ✗ Discovery: Too many applicants ({job['applicant_count']}) - {job.get('title')}")
                         continue
                         
                     # Calculate simple heuristic score
@@ -157,12 +160,15 @@ class JobDiscovery:
                     job["match_score"] = min(score, 100)
                     
                     filtered_jobs.append(job)
+                    self.filter_stats["passed"] += 1
                 
-                logger.info(f"✓ Guest API success: {len(filtered_jobs)} jobs found")
+                self.filter_stats["total_found"] = len(guest_jobs)
+                logger.info(f"✓ Guest API success: {len(filtered_jobs)} jobs passed filters (rejected {self.filter_stats['filtered_applicants']} for applicants)")
                 
                 # Enrich with full descriptions (Deep Fetch)
+                if on_progress: on_progress(20, f"✓ Found {len(filtered_jobs)} jobs. Fetching descriptions...")
                 logger.info(f"🧬 Fetching full descriptions for {len(filtered_jobs)} jobs...")
-                enriched_jobs = await self._enrich_jobs_with_descriptions(filtered_jobs[:max_results])
+                enriched_jobs = await self._enrich_jobs_with_descriptions(filtered_jobs[:max_results], on_progress=on_progress)
                 
                 return {
                     "jobs": enriched_jobs,
@@ -213,7 +219,7 @@ class JobDiscovery:
             "fallback_reason": "LinkedIn Guest API unavailable. Filters (experience, job type) are hints only with DuckDuckGo.",
         }
     
-    async def _enrich_jobs_with_descriptions(self, jobs: list[dict], max_concurrent: int = 3) -> list[dict]:
+    async def _enrich_jobs_with_descriptions(self, jobs: list[dict], max_concurrent: int = 3, on_progress: Optional[Callable[[int, str], Any]] = None) -> list[dict]:
         """
         Fetch full descriptions for a list of jobs concurrently.
         """
@@ -222,8 +228,11 @@ class JobDiscovery:
             
         api = get_guest_api()
         sem = asyncio.Semaphore(max_concurrent)
+        total_jobs = len(jobs)
+        processed_count = 0
         
         async def _enrich_single(job):
+            nonlocal processed_count
             async with sem:
                 job_id = job.get("job_id")
                 if not job_id:
@@ -238,6 +247,12 @@ class JobDiscovery:
                     description = await api.get_job_description(job_id)
                     if description:
                         job["description"] = description
+                
+                processed_count += 1
+                if on_progress:
+                    # Increment from 20% to 50% based on job count
+                    progress_val = 20 + int((processed_count / total_jobs) * 30)
+                    on_progress(progress_val, f"Fetching details: {processed_count}/{total_jobs}")
                 return job
 
         tasks = [_enrich_single(job) for job in jobs]
