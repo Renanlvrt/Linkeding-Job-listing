@@ -1,0 +1,64 @@
+/* ATS-Compliant PDF Styling for WeasyPrint */
+@page {
+    size: A4;
+    margin: 1in;
+}
+
+body {
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    font-size: 18pt;
+    text-align: center;
+    margin-bottom: 5pt;
+    text-transform: uppercase;
+}
+
+h2 {
+    font-size: 13pt;
+    border-bottom: 1px solid #000;
+    margin-top: 15pt;
+    margin-bottom: 8pt;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+h3 {
+    font-size: 11pt;
+    margin-top: 10pt;
+    margin-bottom: 3pt;
+    font-weight: bold;
+}
+
+p,
+ul,
+li {
+    margin-top: 2pt;
+    margin-bottom: 2pt;
+}
+
+ul {
+    padding-left: 20pt;
+    list-style-type: disc;
+}
+
+li {
+    margin-bottom: 4pt;
+}
+
+/* Ensure single column across page breaks */
+.container {
+    width: 100%;
+}
+
+/* Force standard black text for ATS parsing */
+* {
+    color: black !important;
+    background: transparent !important;
+}
