@@ -4,9 +4,12 @@ import {
     Box,
     Typography,
     Chip,
+    IconButton,
+    Tooltip,
 } from '@mui/material'
 import { Job } from '../../mocks/data'
 import { SafeText } from '../../lib/security'
+import { useUpdateJobStatus, useDeleteJob } from '../../hooks/useJobs'
 
 interface RoleCardProps {
     job: Job
@@ -22,6 +25,23 @@ export default function RoleCard({ job, onClick }: RoleCardProps) {
     }
 
     const matchColor = getMatchColor(job.matchScore)
+    const updateStatus = useUpdateJobStatus()
+    const deleteJob = useDeleteJob()
+
+    const isSaved = job.status === 'SAVED'
+
+    const handleSaveToggle = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const newStatus = isSaved ? 'NEW' : 'SAVED'
+        updateStatus.mutate({ id: job.id, status: newStatus })
+    }
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (window.confirm('Are you sure you want to delete this job?')) {
+            deleteJob.mutate(job.id)
+        }
+    }
 
     // Icon based on job type
     const getIcon = (title: string) => {
@@ -64,18 +84,46 @@ export default function RoleCard({ job, onClick }: RoleCardProps) {
                     >
                         <span className="material-symbols-outlined">{getIcon(job.title)}</span>
                     </Box>
-                    <Chip
-                        label={`${job.matchScore}% Match`}
-                        size="small"
-                        sx={{
-                            bgcolor: matchColor.bg,
-                            color: matchColor.text,
-                            border: `1px solid ${matchColor.border}`,
-                            fontWeight: 700,
-                            fontSize: '0.625rem',
-                            textTransform: 'uppercase',
-                        }}
-                    />
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Tooltip title={isSaved ? "Unsave job" : "Save job"}>
+                            <IconButton
+                                size="small"
+                                onClick={handleSaveToggle}
+                                sx={{
+                                    color: isSaved ? '#facc15' : 'text.disabled',
+                                    '&:hover': { color: '#facc15' }
+                                }}
+                            >
+                                <span className={isSaved ? "material-symbols-outlined filled" : "material-symbols-outlined"} style={{ fontVariationSettings: isSaved ? "'FILL' 1" : "none" }}>
+                                    star
+                                </span>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete job">
+                            <IconButton
+                                size="small"
+                                onClick={handleDelete}
+                                sx={{
+                                    color: 'text.disabled',
+                                    '&:hover': { color: '#ef4444' }
+                                }}
+                            >
+                                <span className="material-symbols-outlined">delete</span>
+                            </IconButton>
+                        </Tooltip>
+                        <Chip
+                            label={`${job.matchScore}% Match`}
+                            size="small"
+                            sx={{
+                                bgcolor: matchColor.bg,
+                                color: matchColor.text,
+                                border: `1px solid ${matchColor.border}`,
+                                fontWeight: 700,
+                                fontSize: '0.625rem',
+                                textTransform: 'uppercase',
+                            }}
+                        />
+                    </Box>
                 </Box>
 
                 {/* Title & Company */}

@@ -38,7 +38,17 @@ export function useJobs(options?: {
                 throw error
             }
 
-            return data as Job[]
+            // Client-side sort to ensure SAVED jobs are pinned to top
+            const sortedJobs = (data as Job[]).sort((a, b) => {
+                // Pin SAVED to top
+                if (a.status === 'SAVED' && b.status !== 'SAVED') return -1
+                if (a.status !== 'SAVED' && b.status === 'SAVED') return 1
+
+                // Then sort by match score
+                return (b.match_score || 0) - (a.match_score || 0)
+            })
+
+            return sortedJobs
         },
     })
 }
@@ -73,13 +83,33 @@ export function useUpdateJobStatus() {
         mutationFn: async ({ id, status }: { id: string; status: Job['status'] }) => {
             const { data, error } = await supabase
                 .from('jobs')
-                .update({ status })
+                .update({ status, updated_at: new Date().toISOString() })
                 .eq('id', id)
                 .select()
                 .single()
 
             if (error) throw error
             return data as Job
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['jobs'] })
+        },
+    })
+}
+
+// Delete a job from Supabase
+export function useDeleteJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('jobs')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+            return id
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['jobs'] })

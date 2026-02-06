@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { Box, Typography, Chip, IconButton, CircularProgress } from '@mui/material'
+import { Box, Typography, Chip, IconButton, CircularProgress, Tooltip } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import JobDetailsSideSheet from '../components/roles/JobDetailsSideSheet'
 import { Job } from '../mocks/data'
-import { useJobs } from '../hooks/useJobs'
+import { useJobs, useUpdateJobStatus, useDeleteJob } from '../hooks/useJobs'
 import { mapDbJobToUi } from '../lib/utils'
 
 export default function RolesPage() {
     const [selectedJob, setSelectedJob] = useState<Job | null>(null)
     const [sideSheetOpen, setSideSheetOpen] = useState(false)
+    const updateStatus = useUpdateJobStatus()
+    const deleteJob = useDeleteJob()
 
     // Fetch all jobs from Supabase
     const { data: jobs, isLoading, error } = useJobs()
@@ -96,16 +98,54 @@ export default function RolesPage() {
             width: 100,
             sortable: false,
             filterable: false,
-            renderCell: () => (
-                <>
-                    <IconButton size="small" sx={{ color: 'text.secondary' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>bookmark</span>
-                    </IconButton>
-                    <IconButton size="small" sx={{ color: 'primary.main' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
-                    </IconButton>
-                </>
-            ),
+            renderCell: (params: GridRenderCellParams) => {
+                const job = params.row as Job
+                const isSaved = job.status === 'SAVED'
+
+                const handleSaveToggle = (e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    const newStatus = isSaved ? 'NEW' : 'SAVED'
+                    updateStatus.mutate({ id: job.id, status: newStatus })
+                }
+
+                const handleDelete = (e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    if (window.confirm('Are you sure you want to delete this job?')) {
+                        deleteJob.mutate(job.id)
+                    }
+                }
+
+                return (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title={isSaved ? "Unsave" : "Save"}>
+                            <IconButton
+                                size="small"
+                                onClick={handleSaveToggle}
+                                sx={{
+                                    color: isSaved ? '#facc15' : 'text.disabled',
+                                    '&:hover': { color: '#facc15' }
+                                }}
+                            >
+                                <span className={isSaved ? "material-symbols-outlined filled" : "material-symbols-outlined"} style={{ fontSize: 18, fontVariationSettings: isSaved ? "'FILL' 1" : "none" }}>
+                                    star
+                                </span>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                            <IconButton
+                                size="small"
+                                onClick={handleDelete}
+                                sx={{
+                                    color: 'text.disabled',
+                                    '&:hover': { color: '#ef4444' }
+                                }}
+                            >
+                                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                )
+            },
         },
     ]
 
