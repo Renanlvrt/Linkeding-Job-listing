@@ -1,0 +1,4 @@
+  File "<string>", line 1
+    import asyncio, os; from dotenv import load_dotenv, find_dotenv; from supabase import create_async_client; load_dotenv(find_dotenv()); async def run(): url=os.getenv('SUPABASE_URL'); key=os.getenv('SUPABASE_SERVICE_KEY'); sb=await create_async_client(url, key); res=await sb.table('job_descriptions').select('id,tailored_cv,keywords_found,missing_keywords,status').eq('id', '75d1f618-3c52-47c8-9a09-877c21e91f29').execute(); print(res.data); asyncio.run(run())
+                                                                                                                                           ^^^^^
+SyntaxError: invalid syntax

@@ -16,6 +16,8 @@ ADD COLUMN IF NOT EXISTS tailored_cv text,
 ADD COLUMN IF NOT EXISTS pdf_url text,
 ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending',
 ADD COLUMN IF NOT EXISTS ats_score smallint DEFAULT 0,
+ADD COLUMN IF NOT EXISTS keywords_found jsonb DEFAULT '{}'::jsonb,
+ADD COLUMN IF NOT EXISTS missing_keywords jsonb DEFAULT '[]'::jsonb,
 ADD COLUMN IF NOT EXISTS keyword_match_json jsonb DEFAULT '[]'::jsonb, -- Fixed: added brackets
 ADD COLUMN IF NOT EXISTS retry_count smallint DEFAULT 0,
 ADD COLUMN IF NOT EXISTS error_log text,

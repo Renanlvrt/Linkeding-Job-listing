@@ -1,0 +1,14 @@
+--- DIAGNOSTIC: ATS FORMATTING ---
+FOUND: pipe (Count: 8)
+NOT FOUND: image
+NOT FOUND: table
+NOT FOUND: col
+
+--- DIAGNOSTIC: KEYWORDS ---
+Keyword 'python': FOUND
+Keyword 'asyncio': MISSING
+Keyword 'supabase': MISSING
+Keyword 'agentic': MISSING
+
+--- CV PREVIEW (RAW) ---
+'# Renan Lavirotte\n[REDACTED_EMAIL] • [REDACTED_PHONE] • [REDACTED_URL] • linkedin.com/in/renan-lavirotte-695b39335/\n\n## PROFESSIONAL SUMMARY\nHighly motivated and experienced multidisciplinary machine learning specialist with a strong foundation in AI-driven systems, data analysis, and predictive modeling. Proven track record of developing intelligent, real-time solutions across robotics and software projects, alongside leading high-performance teams in demanding environments.\n\n## SKILLS\n- Progra'

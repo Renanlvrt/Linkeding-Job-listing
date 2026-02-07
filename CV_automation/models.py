@@ -8,6 +8,11 @@ class JDExtraction(BaseModel):
     keywords: List[str] = Field(description="Critical ATS keywords (acronyms + terms)")
     major_responsibilities: List[str] = Field(description="Core duties to map against CV")
 
+class CVMapping(BaseModel):
+    mapped_skills: dict = Field(description="Mapping of JD skills to CV experience snippets")
+    missing_skills: List[str] = Field(description="Skills required by JD but not found in CV")
+    suggested_phrasings: dict = Field(description="Mappings of old terms to new JD-specific terminology")
+
 class CVScore(BaseModel):
     total_score: float = Field(ge=0, le=100)
     metrics: dict = Field(default_factory=lambda: {

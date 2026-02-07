@@ -1,0 +1,5 @@
+--- Job Verification: 75d1f618-3c52-47c8-9a09-877c21e91f29 ---
+Company: Antigravity AI (Test)
+Status:  completed
+Found:   {'Python': 'Developed zero-shot multimodal paradigm using InfoNCE contrastive learning and CLIP semantic alignment, achieving 34.7% accuracy on five unseen classes for cross-subject generalization.', 'Asyncio': 'Built a Python-based sprint analysis tool using OpenCV and MediaPipe to extract 33 body landmarks, implementing custom algorithms for joint angle calculation and 4-phase sprint detection.', 'Supabase': ''}
+Missing: ['Supabase']

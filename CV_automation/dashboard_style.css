@@ -1,0 +1,104 @@
+/* Sprout Dashboard - Premium Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
+
+:root {
+    --sprout-green: #10b981;
+    --sprout-dark: #064e3b;
+    --sprout-glow: rgba(16, 185, 129, 0.2);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+.stApp {
+    background-color: #0f172a;
+    font-family: 'Inter', sans-serif;
+}
+
+h1,
+h2,
+h3 {
+    font-family: 'Outfit', sans-serif;
+    color: #f8fafc;
+}
+
+/* Glass Cards */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+/* Status Badges */
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-pending {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.badge-completed {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 0 15px var(--sprout-glow);
+}
+
+.badge-failed {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* Metric Styling */
+[data-testid="stMetricValue"] {
+    font-family: 'Outfit', sans-serif;
+    color: var(--sprout-green) !important;
+    font-weight: 700 !important;
+}
+
+/* Sidebar Styling */
+[data-testid="stSidebar"] {
+    background-color: #020617 !important;
+    border-right: 1px solid var(--glass-border);
+}
+
+/* Input Styling */
+.stTextArea textarea {
+    background: transparent !important;
+    color: #e2e8f0 !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 8px !important;
+    line-height: 1.6 !important;
+}
+
+/* Buttons */
+.stButton button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px var(--sprout-glow);
+}
+
+/* Match Evidence Section */
+.evidence-found {
+    border-left: 3px solid var(--sprout-green);
+    padding-left: 15px;
+    margin-bottom: 10px;
+}
+
+.evidence-missing {
+    border-left: 3px solid #ef4444;
+    padding-left: 15px;
+    margin-bottom: 10px;
+    opacity: 0.7;
+}
